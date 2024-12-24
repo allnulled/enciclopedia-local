@@ -1,0 +1,38 @@
+<div class="wiki-page">
+    <div class="wiki_title">
+        <span class="wiki_title_text">Enciclopedia local</span>
+        <div class="wiki_controls">
+            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()">☰</button>
+        </div>
+    </div>
+    <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
+        <component :is="'wiki-home-page'"></component>
+    </div>
+    <c-dialog ref="dialogo_de_menu_principal">
+        <template slot="title">Secciones generales</template>
+        <template slot="body">
+            <div class="">
+                <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
+                <ol>
+                    <li>
+                        <a href="#">Sección de inicio</a>
+                    </li>
+                    <li>
+                        <a href="#">Sección de buscador</a>
+                    </li>
+                    <li>
+                        <a href="#">Sección de configuraciones</a>
+                    </li>
+                </ol>
+            </div>
+        </template>
+        <template slot="bodyfooter">
+            <div style="text-align: right; padding: 4px;">
+                <button v-on:click="() => $refs.dialogo_de_menu_principal.close()">Cancelar</button>
+            </div>
+        </template>
+        <template slot="footer">
+            <span class="status-bar-field">Estás en el menú principal.</span>
+        </template>
+    </c-dialog>
+</div>

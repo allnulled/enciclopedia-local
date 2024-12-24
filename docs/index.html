@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+    <title>Litestarter</title>
+</head>
+
+<body>
+
+    <style>
+        :root {
+            --intersitial-loader-height: 28px;
+            --intersitial-loader-bar-color-1: #1be339;
+            --intersitial-loader-bar-color-2: #03ff10;
+        }
+
+        #intersitial {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            font-family: Arial;
+            font-size: 12px;
+            background-color: #222;
+            color: white;
+            box-sizing: border-box;
+            padding: 12px;
+        }
+
+        #intersitial_loader {
+            position: relative;
+            font-family: Arial;
+            min-height: var(--intersitial-loader-height);
+            background-color: #000000;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            /* Sombra interior */
+            border: 1px solid white;
+            border-right: 2px solid white;
+            border-radius: 4pt;
+            overflow: hidden;
+        }
+        
+        #intersitial_loader_bar {
+            height: 100%;
+            min-height: calc(var(--intersitial-loader-height) + 1px);
+            font-size: 12px;    
+            background-color: #0F0;
+            background: linear-gradient(to bottom,
+                var(--intersitial-loader-bar-color-1),
+                var(--intersitial-loader-bar-color-2) 40%,
+                var(--intersitial-loader-bar-color-2) 60%,
+                var(--intersitial-loader-bar-color-1) 100%);
+            box-shadow: inset 0 -2px 5px rgba(255, 255, 255, 0.3);
+            width: 0%;
+            transition: width .2s linear;
+        }
+
+        #intersitial_message {
+            position: absolute;
+            top: calc(calc(var(--intersitial-loader-height) / 4) + 2px);
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: gold: font-family: Arial;
+            font-size: 10px;
+            font-family: monospace;
+            border: 0px solid #888;
+            color: blue;
+            text-shadow: 0 0 1px blue;
+        }
+
+        #intersitial_modules_trace {
+            font-family: Arial;
+            font-size: 12px;
+            border: 0px solid #888;
+            margin: 0;
+            padding: 4px;
+            margin-bottom: 1px;
+        }
+
+        #intersitial,
+        #intersitial_modules_trace {
+            background-color: #222;
+            color: white;
+        }
+        @font-face {
+            font-family: "LinuxLibertine";
+            src: url("src/fonts/linux_libertine/LinLibertine_R.ttf");
+        }
+        @font-face {
+            font-family: "Segoe UI";
+            src: url("src/fonts/segoe-ui-this/segoeuithis.ttf");
+        }
+    </style>
+    <div id="app"></div>
+    <div id="intersitial">
+        <div id="intersitial_loader">
+            <div id="intersitial_loader_bar"></div>
+            <div id="intersitial_message">
+                <span>Loaded <span id="intersitial_modules_loaded"></span>/<span id="intersitial_modules_all"></span> modules</span>
+            </div>
+        </div>
+        <pre id="intersitial_modules_trace"></pre>
+    </div>
+    <script src="src/external/importer.js"></script>
+    <script src="src/index.js"></script>
+</body>
+
+</html>
