@@ -14,7 +14,7 @@ Vue.component("app", {
   name: "app",
   template: `<div class="app">
     <!--Contenido del componente-->
-    <home-page></home-page>
+    <wiki-page></wiki-page>
 </div>`,
   props: {},
   data() {
@@ -71,6 +71,27 @@ Vue.component("c-dialog", {
                                 </div>
                                 <div style="flex: 1;"
                                     v-if="$slots.bodyfooter">
+                                    <div class="" style="position: relative;" v-if="error">
+                                        <div class="" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
+                                            <div v-if="error instanceof Error">
+                                                <div>
+                                                    <span>Error: </span>
+                                                    <span>{{ error.name }}</span>
+                                                </div>
+                                                <div>
+                                                    <span>Message: </span>
+                                                    <span>{{ error.message }}</span>
+                                                </div>
+                                                <div>
+                                                    <span>Trace: </span>
+                                                    <span>{{ error.stack }}</span>
+                                                </div>
+                                            </div>
+                                            <div v-else="">
+                                                <div>{{ error }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <slot name="bodyfooter"></slot>
                                 </div>
                             </div>
@@ -94,6 +115,7 @@ Vue.component("c-dialog", {
   data() {
     return Object.assign({}, defaultData, {
       priority: 1,
+      error: false,
     });
   },
   methods: {
@@ -135,6 +157,12 @@ Vue.component("c-dialog", {
     },
     _close() {
       this.$el.querySelector("dialog").close();
+    },
+    setError(error) {
+      this.error = error;
+    },
+    clearError() {
+      this.error = false;
     }
   },
   watch: {}
@@ -161,155 +189,352 @@ Vue.component("c-title", {
   activated() {},
   deactivated() {},
 });
-Vue.component("home-page", {
-  name: "home-page",
-  template: `<div class="home-page">
-    <c-dialog ref="dialogo_1">
-        <template slot="title">Título del diálogo</template>
-        <template slot="body">
-            Cuerpo del diálogo
-        </template>
-        <template slot="bodyfooter">
-            <div style="text-align: right; padding: 4px;">
-                <button v-on:click="() => $refs.dialogo_1.set(true).close()">Aceptar</button>
-                <button v-on:click="() => $refs.dialogo_1.close()">Cancelar</button>
-            </div>
-        </template>
-        <!--template slot="footer">
-            <span class="status-bar-field">Pie del diálogo</span>
-        </template-->
-    </c-dialog>
-    <c-dialog ref="notificacion_1">
-        <template slot="title">Título del diálogo</template>
-        <template slot="body">
-            Cuerpo del diálogo
-        </template>
-        <template slot="bodyfooter">
-            <div style="text-align: right; padding: 4px;">
-                <button v-on:click="() => $refs.notificacion_1.set(true).close()">Aceptar</button>
-                <button v-on:click="() => $refs.notificacion_1.close()">Cancelar</button>
-            </div>
-        </template>
-        <!--template slot="footer">
-            <span class="status-bar-field">Pie del diálogo</span>
-        </template-->
-    </c-dialog>
-    <div class="wiki_viewer">
-        <div class="wiki_content">
-            <div class="wiki_title">
-                <span class="wiki_title_text">En Linux Libertine y en 21.8px</span>
-                <span class="wiki_title_controls">
-                    <button class="stretch_button"
-                        v-on:click="() => $refs.notificacion_1.open()">Notificación</button>
-                    <button class="stretch_button"
-                        v-on:click="() => $refs.dialogo_1.open()">Diálogo</button>
-                </span>
-            </div>
-            <!--
-        wiki_table_of_contents
-        wiki_article
-        wiki_table_of_details
-        -->
-            <div class="wiki_subtitle">
-                <span class="wiki_subtitle_text">En Linux Libertine y en 17px</span>
-                <span class="wiki_subtitle_controls">
-                    <button class="stretch_button"
-                        v-on:click="() => $refs.notificacion_1.open()">Notificación</button>
-                    <button class="stretch_button"
-                        v-on:click="() => $refs.dialogo_1.open()">Diálogo</button>
-                </span>
-            </div>
-            <div class="table_of_details">
-                <div class="title">Título del artículo</div>
-                <div class="image_container">
-                    <div class="image">Imagen no disponible.</div>
-                    <div class="image_footer">Título de la imagen.</div>
-                </div>
-                <table class="subtable_of_details">
-                    <thead>
-                        <tr>
-                            <td class="title" colspan="100">Título de la tabla</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="key">Propiedad:</td>
-                            <td class="value">Valor</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="wiki_paragraph">Texto normal, en Arial o Sans-Serif o algo.</div>
-            <div class="wiki_paragraph">Esto sería un <a href="#">hipervínculo</a> a algún recurso.</div>
-            <div class="wiki_paragraph">Esto sería una lista de elementos ordenados:</div>
-            <ol class="wiki_list">
-                <li>
-                    <div>Elemento 1:</div>
-                    <ol class="wiki_list">
-                        <li>Elemento 1.1</li>
-                        <li>Elemento 1.2</li>
-                        <li>Elemento 1.3</li>
-                    </ol>
-                </li>
-                <li>
-                    <div>Elemento 2:</div>
-                    <ol class="wiki_list">
-                        <li>Elemento 2.1</li>
-                        <li>Elemento 2.2</li>
-                        <li>Elemento 2.3</li>
-                    </ol>
-                </li>
-                <li>
-                    <div>Elemento 3:</div>
-                    <ol class="wiki_list">
-                        <li>Elemento 3.1</li>
-                        <li>Elemento 3.2</li>
-                        <li>Elemento 3.3</li>
-                    </ol>
-                </li>
-            </ol>
-            <div class="wiki_paragraph">Esto sería una lista de elementos desordenados:</div>
-            <ul class="wiki_list">
-                <li>
-                    <div>Elemento 1:</div>
-                    <ul class="wiki_list">
-                        <li>Elemento 1.1</li>
-                        <li>Elemento 1.2</li>
-                        <li>Elemento 1.3</li>
-                    </ul>
-                </li>
-                <li>
-                    <div>Elemento 2:</div>
-                    <ul class="wiki_list">
-                        <li>Elemento 2.1</li>
-                        <li>Elemento 2.2</li>
-                        <li>Elemento 2.3</li>
-                    </ul>
-                </li>
-                <li>
-                    <div>Elemento 3:</div>
-                    <ul class="wiki_list">
-                        <li>Elemento 3.1</li>
-                        <li>Elemento 3.2</li>
-                        <li>Elemento 3.3</li>
-                    </ul>
-                </li>
-            </ul>
-            <div class="wiki_paragraph">Esto es un superíndice<a href="#"><sup>[123]</sup></a> y esto un subíndice <a href="#"><sub>[123]</sub></a></div>
+Vue.component("wiki-page", {
+  name: "wiki-page",
+  template: `<div class="wiki-page">
+    <div class="wiki_title">
+        <span class="wiki_title_text">Enciclopedia local</span>
+        <div class="wiki_controls">
+            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()">☰</button>
         </div>
     </div>
+    <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
+        <component :is="'wiki-home-page'" :root="this"></component>
+    </div>
+    <c-dialog ref="dialogo_de_menu_principal">
+        <template slot="title">Secciones generales</template>
+        <template slot="body">
+            <div class="">
+                <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
+                <ol>
+                    <li>
+                        <a href="#">Sección de inicio</a>
+                    </li>
+                    <li>
+                        <a href="#">Sección de buscador</a>
+                    </li>
+                    <li>
+                        <a href="#">Sección de configuraciones</a>
+                    </li>
+                </ol>
+            </div>
+        </template>
+        <template slot="bodyfooter">
+            <div style="text-align: right; padding: 4px;">
+                <button v-on:click="() => $refs.dialogo_de_menu_principal.close()">Cancelar</button>
+            </div>
+        </template>
+        <template slot="footer">
+            <span class="status-bar-field">Estás en el menú principal.</span>
+        </template>
+    </c-dialog>
 </div>`,
   props: {},
   data() {
     return {}
   },
-  methods: {},
+  methods: {
+    async listDatabases() {
+      this.$logger.trace("wiki-page.listDatabases", arguments);
+      const allDatabases = await this.$window.Webmarket.listDatabases();
+      const APP_MARKET_PREFIX = "webmarket.enciclopedia_local.";
+      return allDatabases.filter(dbName => dbName.startsWith(APP_MARKET_PREFIX)).map(dbName => dbName.replace(APP_MARKET_PREFIX, ""));
+    },
+    _correctDBName(name, alsoPrependReal = true) {
+      const name2 = name.replace(/^(webmarket\.)(enciclopedia_local\.)?/g, "");
+      if(alsoPrependReal) {
+        return "webmarket.enciclopedia_local." + name2;
+      } else {
+        return name2;
+      }
+    },
+    async createDatabase(name) {
+      this.$logger.trace("wiki-page.createDatabase", arguments);
+      return await this.$window.Webmarket.open(this._correctDBName(name));
+    },
+    async deleteDatabase(name) {
+      this.$logger.trace("wiki-page.deleteDatabase", arguments);
+      const request = indexedDB.deleteDatabase("webmarket.enciclopedia_local.Whereeee");
+      return new Promise((resolve, reject) => {
+        request.onsuccess = function () {
+          console.log(`[*] Base de datos '${name}' eliminada exitosamente.`);
+          return resolve(request);
+        };
+        request.onerror = function (event) {
+          console.error(`[!] Error al eliminar la base de datos '${name}':`, event.target.error);
+          return reject(event);
+        };
+        request.onblocked = function () {
+          console.warn(`[!] La eliminación de la base de datos '${name}' está bloqueada. Cierra otras pestañas o procesos usando esta base de datos.`);
+          return reject(request);
+        };
+      });
+    }
+  },
   watch: {},
   beforeCreate() { },
   created() { },
   beforeMount() { },
   mounted() {
-    this.$window.c = this;
+      this.$logger.trace("wiki-page.mounted", arguments);
+      this.$window.c = this;
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-home-page", {
+  name: "wiki-home-page",
+  template: `<div class="wiki-home-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            <div class="wiki_paragraph">Bienvenid@ a enciclopedia-local <sup><a href="#references">[ 1 ]</a></sup>.</div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Bases de datos disponibles</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button"
+                        v-on:click="loadDatabases">⟳</button>
+                </span>
+            </div>
+            <div class="wiki_list_viewer"
+                style="padding: 0px;">
+                <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
+                <ol v-else="">
+                    <template v-for="db, dbIndex in filtered_databases">
+                        <li v-bind:key="'available_database_' + dbIndex">
+                            <a class="accessible_text"
+                                href="#">{{ db }}</a>
+                        </li>
+                    </template>
+                </ol>
+            </div>
+            <input v-model="database_text_filter"
+                style="width: 100%;"
+                type="search"
+                placeholder="Filtra bases de datos aquí">
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Otras operaciones disponibles</span>
+            </div>
+            <ol style="padding-top: 0px;">
+                <li><a href="#"
+                        v-on:click="_onClickCreateDatabase">Crear base de datos</a></li>
+                <li><a href="#"
+                        v-on:click="_onClickRenameDatabase">Renombrar base de datos</a></li>
+                <li><a class="danger_text"
+                        href="#"
+                        v-on:click="_onClickDeleteDatabase">Eliminar base de datos</a></li>
+            </ol>
+            <c-dialog ref="dialogo_crear_base_de_datos">
+                <template slot="title">Crear base de datos</template>
+                <template slot="body">
+                    <div class="">
+                        <div class="wiki_paragraph"><b>Paso 1.</b> Escribe el nombre de la nueva base de datos:</div>
+                        <input style="width:100%;"
+                            type="text"
+                            v-model="new_database_name"
+                            v-autofocus
+                            v-on:keypress.enter="_onClickAcceptCreateDatabase"
+                            v-on:keyup.esc="_onClickCancelCreateDatabase" />
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#" v-on:click="_onClickAcceptCreateDatabase">Crear</a>.</div>
+                    </div>
+                </template>
+                <template slot="bodyfooter">
+                    <div style="text-align: right; padding: 4px;">
+                        <button v-on:click="_onClickAcceptCreateDatabase">Crear</button>
+                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                    </div>
+                </template>
+                <template slot="footer">
+                    <span class="status-bar-field">Estás en el menú principal.</span>
+                </template>
+            </c-dialog>
+            <c-dialog ref="dialogo_renombrar_base_de_datos">
+                <template slot="title">Renombrar base de datos</template>
+                <template slot="body">
+                    <div class="">
+                        <div class="wiki_paragraph"><b>Paso 1.</b> Escoge la base de datos a renombrar:</div>
+                        <div class="wiki_list_viewer"
+                            style="padding: 0px;">
+                            <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
+                            <ol v-else="">
+                                <template v-for="db, dbIndex in filtered_databases">
+                                    <li v-bind:key="'available_database_' + dbIndex">
+                                        <a class="accessible_text"
+                                            href="#">{{ db }}</a>
+                                    </li>
+                                </template>
+                            </ol>
+                        </div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Escribe el nuevo nombre de la base de datos:</div>
+                        <input style="width:100%;"
+                            type="text"
+                            v-model="new_database_name"
+                            v-autofocus
+                            v-on:keypress.enter="_onClickAcceptCreateDatabase"
+                            v-on:keyup.esc="_onClickCancelCreateDatabase" />
+                        <div class="wiki_paragraph"><b>Paso 3.</b> Clica a 'Renombrar'</div>
+                    </div>
+                </template>
+                <template slot="bodyfooter">
+                    <div style="text-align: right; padding: 4px;">
+                        <button v-on:click="_onClickAcceptCreateDatabase">Renombrar</button>
+                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                    </div>
+                </template>
+                <template slot="footer">
+                    <span class="status-bar-field">Estás en el menú principal.</span>
+                </template>
+            </c-dialog>
+            <c-dialog ref="dialogo_eliminar_base_de_datos">
+                <template slot="title">Eliminar base de datos</template>
+                <template slot="body">
+                    <div class="">
+                        <div class="wiki_paragraph"><b>Paso 1.</b> Selecciona la base de datos a eliminar:</div>
+                        <div class="wiki_list_viewer"
+                            style="padding: 0px;">
+                            <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
+                            <ol v-else="">
+                                <template v-for="db, dbIndex in filtered_databases">
+                                    <li v-bind:key="'available_database_' + dbIndex">
+                                        <a class="accessible_text"
+                                            href="#">{{ db }}</a>
+                                    </li>
+                                </template>
+                            </ol>
+                        </div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a 'Eliminar':</div>
+                    </div>
+                </template>
+                <template slot="bodyfooter">
+                    <div style="text-align: right; padding: 4px;">
+                        <button v-on:click="_onClickAcceptCreateDatabase">Eliminar</button>
+                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                    </div>
+                </template>
+                <template slot="footer">
+                    <span class="status-bar-field">Estás en el menú principal.</span>
+                </template>
+            </c-dialog>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Referencias</span>
+            </div>
+            <div class="wiki_references">
+                <ol>
+                    <li>
+                        <div>Documentación oficial de «enciclopedia-local» en:</div>
+                        <ul class="inner">
+                            <li>
+                                <a
+                                    href="https://github.com/allnulled/enciclopedia-local">https://github.com/allnulled/enciclopedia-local</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      database_text_filter: "",
+      omitted_databases_by_text_filter: [],
+      available_databases: [],
+      filtered_databases: [],
+      new_database_name: "",
+      delete_database_name: undefined
+    }
+  },
+  methods: {
+    async loadDatabases() {
+      this.$logger.trace("wiki-home-page.loadDatabases", arguments);
+      this.available_databases = await this.root.listDatabases();
+      this._synchronizeFilteredDatabases();
+    },
+    async _onClickCreateDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCreateDatabase", arguments);
+      this.new_database_name = "";
+      const respuesta = await this.$refs.dialogo_crear_base_de_datos.open();
+      if (typeof respuesta !== "undefined") {
+        // // No esto:
+        // await this.$window.Webmarket.open(respuesta);
+        // // Sino esto:
+        await this.root.createDatabase(respuesta);
+        await this.loadDatabases();
+      }
+      return respuesta;
+    },
+    async _onClickDeleteDatabase() {
+      this.$logger.trace("wiki-home-page._onClickDeleteDatabase", arguments);
+      this.delete_database_name = undefined;
+      await this.$refs.dialogo_eliminar_base_de_datos.open();
+      return;
+    },
+    _onClickAcceptCreateDatabase() {
+      this.$logger.trace("wiki-home-page._onClickAcceptCreateDatabase", arguments);
+      if(!this.new_database_name) {
+        this.$refs.dialogo_crear_base_de_datos.setError(new Error("El nombre de la base de datos no puede estar vacío"));
+        return;
+      }
+      return this.$refs.dialogo_crear_base_de_datos.set(this.new_database_name).close();
+    },
+    _onClickCancelCreateDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCancelCreateDatabase", arguments);
+      return this.$refs.dialogo_crear_base_de_datos.close();
+    },
+    _onClickRenameDatabase() {
+      this.$logger.trace("wiki-home-page._onClickRenameDatabase", arguments);
+      return this.$refs.dialogo_renombrar_base_de_datos.open();
+    },
+    _synchronizeFilteredDatabases() {
+      this.$logger.trace("wiki-home-page._synchronizeFilteredDatabases", arguments);
+      const databaseList = [];
+      const textFilter = this.database_text_filter;
+      if (textFilter.length !== 0) {
+        for (let index = 0; index < this.available_databases.length; index++) {
+          const db = this.available_databases[index];
+          const hasMatch = this.root._correctDBName(db, false).indexOf(textFilter) === -1;
+          if (hasMatch) {
+            databaseList.push(db);
+          }
+        }
+      }
+      omitted_databases_by_text_filter = databaseList;
+      let sorted_databases = [];
+      if (textFilter.length !== 0) {
+        sorted_databases = this.available_databases.filter(db => omitted_databases_by_text_filter.indexOf(db) === -1).sort();
+      } else {
+        sorted_databases = this.available_databases.sort();
+      }
+      this.filtered_databases = sorted_databases;
+    }
+  },
+  watch: {
+    database_text_filter() {
+      this.$logger.trace("wiki-home-page.watch.database_text_filter", arguments);
+      this._synchronizeFilteredDatabases();
+    }
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-home-page.mounted", arguments);
+    this.loadDatabases();
   },
   beforeUpdate() { },
   updated() { },

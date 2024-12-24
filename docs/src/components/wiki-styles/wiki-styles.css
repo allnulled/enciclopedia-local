@@ -265,7 +265,7 @@ a {
 ul,ol {
     margin: 0px;
     padding: 0px;
-    padding-top: 8px;
+    padding-top: 0px;
     padding-bottom: 0px;
     padding-left: 20px;
 }
@@ -363,4 +363,24 @@ sub {
     box-shadow: inset 0px 0px 4px 4px #EEF;
     overflow: scroll;
     resize: vertical;
+}
+.danger_text {
+    color: rgb(84, 2, 2);
+}
+.danger_text:visited,
+.danger_text:active {
+    color: rgb(84, 2, 2);
+}
+.danger_text:hover {
+    color: red;
+}
+.accessible_text {
+    color: rgb(14, 50, 8);
+}
+.accessible_text:visited,
+.accessible_text:active {
+    color: rgb(14, 50, 8);
+}
+.accessible_text:hover {
+    color: rgb(41, 161, 20);
 }

@@ -146,8 +146,8 @@
     --border-color-input-binary--checked: var(--border-color-progressive);
     --color-base--subtle: #54595d;
     /* Custom: */
-    --border-color-title: #101010;
-    --color-title: #373737;
+    --border-color-title: #18184D;
+    --color-title: #18184D;
     --color-subtitle: #616161;
     --border-color-subtitle: #7e7e7e;
     --border-color-1: #BBB;
@@ -156,7 +156,19 @@
 html, body {
     padding: 0px;
     margin: 0px;
-    background-color: #CCC;
+}
+
+hr {
+    padding: 0px;
+    margin: 0px;
+    margin-top: 8px;
+    border: none;
+    border-top: 1px solid #EEE;
+}
+
+u {
+    text-decoration: none;
+    border-bottom: 1px solid blue;
 }
 
 .wiki_viewer {
@@ -167,29 +179,27 @@ html, body {
 }
 
 .wiki_content {
-    font-family: "sans-serif";
-    font-size: 11px;
-    border: 3px double #222;
+    font-family: "Segoe UI","SegoeUI","Noto Sans","sans-serif";
+    font-size: 12px;
     background-color: #FFF;
-    padding: 8px;
+    padding: 0px;
     padding-top: 0px;
     padding-bottom: 0px;
 }
 .wiki_title {
     /* Imitamos la fuente: */
     font-family: "LinuxLibertine";
-    font-size: 21.8px;
+    font-size: 24px;
     font-weight: bold;
     /* Imitamos el borde inferior: */
-    border-bottom: 1px solid var(--border-color-title);
     border-bottom: 1px solid var(--border-color-1);
+    border-bottom: 0px solid var(--border-color-title);
     color: var(--color-title);
     text-shadow: 0 0 1px #888;
     /* Apañamos unos espacios: */
-    padding: 5px;
-    padding-right: 0px;
-    padding-top: 2px;
-    padding-bottom: 0px;
+    padding: 0px;
+    background-color: var(--color-title);
+    color: white;
     /* Aplicamos flex: */
     display: flex;
     flex-direction: row;
@@ -197,21 +207,24 @@ html, body {
 .wiki_title_text {
     flex: 100;
     /* Alineamos abajo */
-    align-content: end;
-    padding-bottom: 1px;
+    padding: 8px;
+    align-content: center;
 }
-.wiki_title_controls {
+.wiki_controls {
     flex: 1;
-    align-content: end;
+    display: flex; /* and magic happens */
     text-align: right;
     vertical-align: top;
-    padding-bottom: 4px;
+    padding-bottom: 0px;
+    padding-right: 0px;
     white-space: nowrap;
+    align-content: center;
+    padding: 2px;
 }
 .wiki_subtitle {
     /* Imitamos la fuente: */
     font-family: "LinuxLibertine";
-    font-size: 17px;
+    font-size: 16px;
     font-weight: normal;
     /* Imitamos el borde inferior: */
     border-bottom: 1px solid var(--border-color-subtitle);
@@ -219,10 +232,7 @@ html, body {
     color: var(--color-subtitle);
     text-shadow: 0 0 1px #CCC;
     /* Apañamos unos espacios: */
-    padding: 5px;
-    padding-right: 0px;
-    padding-top: 2px;
-    padding-bottom: 0px;
+    padding: 0px;
     /* Aplicamos flex: */
     display: flex;
     flex-direction: row;
@@ -233,17 +243,13 @@ html, body {
     align-content: end;
     padding-bottom: 1px;
 }
-.wiki_subtitle_controls {
-    flex: 1;
-    align-content: end;
-    text-align: right;
-    vertical-align: top;
-    padding-bottom: 4px;
-    white-space: nowrap;
-}
 .wiki_paragraph {
     /* Unos espacios: */
     padding-top: 8px;
+}
+.wiki_paragraph_no_spaces {
+    /* Unos espacios: */
+    padding: 0px;
 }
 button {
     cursor: pointer;
@@ -263,7 +269,14 @@ a {
 ul,ol {
     margin: 0px;
     padding: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
     padding-left: 20px;
+}
+ul.inner,
+ol.inner {
+    padding-top: 0px;
+    padding-bottom: 0px;
 }
 li {
     padding: 0px;
@@ -315,7 +328,7 @@ sub {
 }
 .subtable_of_details .title {
     font-size: 12px;
-    font-family: sans-serif;
+    font-family: "sans-serif";
     font-weight: bold;
     padding: 0px;
     padding-top: 4px;
@@ -326,6 +339,54 @@ sub {
 }
 .subtable_of_details .value {
     width: 100%;
+}
+
+.wiki_references {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    font-size: 10px;
+}
+
+.wiki_space_1 {
+    min-height: 4px;
+}
+.wiki_space_2 {
+    min-height: 8px;
+}
+.wiki_space_3 {
+    min-height: 12px;
+}
+
+.wiki_list_viewer {
+    height: 100%;
+    min-height: 80px;
+    max-height: 120px;
+    border: 1px solid #CCC;
+    margin: 1px;
+    margin-top: 0px;
+    box-shadow: inset 0px 0px 4px 4px #EEF;
+    overflow: scroll;
+    resize: vertical;
+}
+.danger_text {
+    color: rgb(84, 2, 2);
+}
+.danger_text:visited,
+.danger_text:active {
+    color: rgb(84, 2, 2);
+}
+.danger_text:hover {
+    color: red;
+}
+.accessible_text {
+    color: rgb(14, 50, 8);
+}
+.accessible_text:visited,
+.accessible_text:active {
+    color: rgb(14, 50, 8);
+}
+.accessible_text:hover {
+    color: rgb(41, 161, 20);
 }
 .app {
     
@@ -417,4 +478,6 @@ sub {
     color: white;
 }
 .home-page {}
+.wiki-home-page {}
+
 

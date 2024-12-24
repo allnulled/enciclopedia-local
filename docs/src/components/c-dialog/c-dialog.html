@@ -21,6 +21,27 @@
                                 </div>
                                 <div style="flex: 1;"
                                     v-if="$slots.bodyfooter">
+                                    <div class="" style="position: relative;" v-if="error">
+                                        <div class="" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
+                                            <div v-if="error instanceof Error">
+                                                <div>
+                                                    <span>Error: </span>
+                                                    <span>{{ error.name }}</span>
+                                                </div>
+                                                <div>
+                                                    <span>Message: </span>
+                                                    <span>{{ error.message }}</span>
+                                                </div>
+                                                <div>
+                                                    <span>Trace: </span>
+                                                    <span>{{ error.stack }}</span>
+                                                </div>
+                                            </div>
+                                            <div v-else="">
+                                                <div>{{ error }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <slot name="bodyfooter"></slot>
                                 </div>
                             </div>

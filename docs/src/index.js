@@ -6,44 +6,51 @@ window.process = {
 };
 process.env.NODE_ENV = "production";
 process.env.NODE_ENV = "test";
+process.env.NODE_ENV = "development";
 const main = async function () {
     try {
         Import_scripts: {
-            if(process.env.NODE_ENV === "test") {
-                importer.setTotal(45);
+            if (process.env.NODE_ENV === "test") {
+                importer.setTotal(44);
                 importer.setTimeout(1000 * 0);
-                await Promise.all([
-                    importer.scriptSrc("src/external/socket.io-client.js"),
-                    importer.scriptSrc("src/external/vue-v2.js"),
-                    importer.scriptSrc("src/external/basic-logger.js"),
-                    importer.scriptSrc("src/external/ensure.js"),
-                    importer.scriptSrc("src/external/ufs.js"),
-                    importer.scriptSrc("src/external/store.unbundled.js"),
-                    importer.scriptSrc("src/external/webmarket.js"),
-                    importer.scriptSrc("src/external/sql-wasm.js"),
-                    importer.scriptSrc("src/external/sqlite-polyfill.js"),
-                    importer.scriptSrc("src/external/sqlite-data-system.unbundled.js"),
-                ]);
-                await Promise.all([
-                    importer.scriptSrc("src/components/c-dialogs/c-dialogs.js"),
-                    importer.scriptSrc("src/components/c-badges/c-badges.js"),
-                    importer.importVueComponent("src/components/c-title/c-title"),
-                    importer.importVueComponent("src/components/wiki-page/wiki-page"),
-                    importer.importVueComponent("src/components/app/app"),
-                    importer.importVueComponent("src/components/c-dialog/c-dialog"),
-                    importer.importVueComponent("src/components/c-badge/c-badge"),
-                ]);
-                ///////////////////////////////////////////////////////
-                await importer.importVueComponent("src/components/c-title/c-title");
-                await importer.importVueComponent("src/components/wiki-page/wiki-page");
-                await importer.importVueComponent("src/components/wiki-home-page/wiki-home-page");
-                await importer.importVueComponent("src/components/app/app");
-                ///////////////////////////////////////////////////////
-                await importer.linkStylesheet("src/components/wiki-page/wikipedia.css");
-                // await importer.linkStylesheet("src/external/wikipedia.css");
-                await importer.linkStylesheet("src/external/win7.css");
-                await importer.scriptSrc("src/external/refresher.js");
-            } else if(process.env.NODE_ENV === "production") {
+                Bundlelist_js: {
+                    await Promise.all([
+                        importer.scriptSrc("src/external/socket.io-client.js"),
+                        importer.scriptSrc("src/external/vue-v2.js"),
+                        importer.scriptSrc("src/external/basic-logger.js"),
+                        importer.scriptSrc("src/external/ensure.js"),
+                        importer.scriptSrc("src/external/ufs.js"),
+                        importer.scriptSrc("src/external/store.unbundled.js"),
+                        importer.scriptSrc("src/external/webmarket.js"),
+                        importer.scriptSrc("src/external/sql-wasm.js"),
+                        importer.scriptSrc("src/external/sqlite-polyfill.js"),
+                        importer.scriptSrc("src/external/sqlite-data-system.unbundled.js"),
+                        importer.scriptSrc("src/directives/autofocus.js"),
+                        importer.scriptSrc("src/components/utils/utils.js"),
+                        importer.scriptSrc("src/components/c-dialogs/c-dialogs.js"),
+                        importer.scriptSrc("src/components/c-badges/c-badges.js"),
+                        // await importer.scriptSrc("dist/components.js"),
+                    ]);
+                }
+                Bundlelist_components: {
+                    await Promise.all([
+                        importer.importVueComponent("src/components/c-title/c-title"),
+                        importer.importVueComponent("src/components/c-dialog/c-dialog"),
+                        importer.importVueComponent("src/components/c-badge/c-badge"),
+                        importer.importVueComponent("src/components/wiki-page/wiki-page"),
+                        importer.importVueComponent("src/components/wiki-home-page/wiki-home-page"),
+                        importer.importVueComponent("src/components/app/app"),
+                    ]);
+                }
+                Bundlelist_css: {
+                    await importer.linkStylesheet("src/external/win7.css");
+                    await importer.linkStylesheet("src/components/wiki-styles/wiki-styles.css");
+                    // await importer.linkStylesheet("dist/components.css"),
+                }
+                Payload: {
+                    await importer.scriptSrc("src/external/refresher.js");
+                }
+            } else if (process.env.NODE_ENV === "production") {
                 importer.setTotal(1);
                 importer.setTimeout(1000 * 1);
                 await importer.scriptSrc("dist/app.js");
@@ -65,6 +72,10 @@ const main = async function () {
             Vue.prototype.$fetch = fetch;
             Vue.prototype.$ufs = UFS_manager.create();
             Vue.prototype.$store = UniversalStore.create();
+            Vue.prototype.$utils = Enciclopedia_local_utils;
+            Vue.prototype.$market = {
+                articulos: await Webmarket.open("enciclopedia_local.articulos"),
+            };
             Conflictive_point: {
                 // Vue.prototype.$sqlite = new SQLitePolyfill("litestarter.main.db", "src/external/sql-wasm.wasm");
                 // await Vue.prototype.$sqlite.init("litestarter.main.db", "src/external/sql-wasm.wasm");

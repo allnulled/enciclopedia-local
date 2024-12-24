@@ -12,6 +12,7 @@ Vue.component("c-dialog", {
   data() {
     return Object.assign({}, defaultData, {
       priority: 1,
+      error: false,
     });
   },
   methods: {
@@ -53,6 +54,12 @@ Vue.component("c-dialog", {
     },
     _close() {
       this.$el.querySelector("dialog").close();
+    },
+    setError(error) {
+      this.error = error;
+    },
+    clearError() {
+      this.error = false;
     }
   },
   watch: {}
