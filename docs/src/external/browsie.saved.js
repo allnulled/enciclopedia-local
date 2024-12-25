@@ -23,14 +23,6 @@
       }
     }
 
-    static addOpenedConnection(connection) {
-
-    }
-
-    static removeOpenedConnection(connection) {
-
-    }
-
     static async listDatabases() {
       this.trace("Browsie.listDatabases", arguments);
       try {
@@ -80,9 +72,6 @@
         const request = indexedDB.open(dbName);
         request.onsuccess = async (event) => {
           const db = event.target.result;
-          if(!db.objectStoreNames.length) {
-            return resolve(0);
-          }
           const transaction = db.transaction(db.objectStoreNames, 'readonly');
           let totalSize = 0;
     
@@ -245,7 +234,6 @@
       this.trace("Browsie.open", arguments);
       const db = new this(...args);
       await db.open();
-      this.addOpenedConnection(db);
       return db;
     }
 

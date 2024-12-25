@@ -2,7 +2,9 @@
     <div class="wiki_title">
         <span class="wiki_title_text">Enciclopedia local</span>
         <div class="wiki_controls">
-            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()">☰</button>
+            
+            <button class="stretch_button" v-on:click="() => selectPage('wiki-home-page')" v-if="selected_page !== 'wiki-home-page'" style="min-width: 30px; margin-right: 2px;">◂</button>
+            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()" style="min-width: 30px;">☰</button>
         </div>
     </div>
     <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
@@ -13,7 +15,7 @@
         <template slot="body">
             <div class="">
                 <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
-                <ol>
+                <ul>
                     <li>
                         <a href="#" v-on:click="() => selectPage('wiki-home-page')">Sección de inicio</a>
                     </li>
@@ -23,7 +25,7 @@
                     <li>
                         <a href="#" v-on:click="() => selectPage('wiki-settings-page')">Sección de configuraciones</a>
                     </li>
-                </ol>
+                </ul>
             </div>
         </template>
         <template slot="bodyfooter">

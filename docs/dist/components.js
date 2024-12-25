@@ -244,7 +244,9 @@ Vue.component("wiki-page", {
     <div class="wiki_title">
         <span class="wiki_title_text">Enciclopedia local</span>
         <div class="wiki_controls">
-            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()">☰</button>
+            
+            <button class="stretch_button" v-on:click="() => selectPage('wiki-home-page')" v-if="selected_page !== 'wiki-home-page'" style="min-width: 30px; margin-right: 2px;">◂</button>
+            <button class="stretch_button" v-on:click="() => $refs.dialogo_de_menu_principal.open()" style="min-width: 30px;">☰</button>
         </div>
     </div>
     <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
@@ -255,7 +257,7 @@ Vue.component("wiki-page", {
         <template slot="body">
             <div class="">
                 <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
-                <ol>
+                <ul>
                     <li>
                         <a href="#" v-on:click="() => selectPage('wiki-home-page')">Sección de inicio</a>
                     </li>
@@ -265,7 +267,7 @@ Vue.component("wiki-page", {
                     <li>
                         <a href="#" v-on:click="() => selectPage('wiki-settings-page')">Sección de configuraciones</a>
                     </li>
-                </ol>
+                </ul>
             </div>
         </template>
         <template slot="bodyfooter">
@@ -352,7 +354,7 @@ Vue.component("wiki-home-page", {
             <div class="wiki_list_viewer"
                 style="padding: 0px;">
                 <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
-                <ol v-else="">
+                <ul v-else="">
                     <template v-for="db, dbIndex in filtered_databases">
                         <li v-bind:key="'available_database_' + dbIndex">
                             <a class="accessible_text display_block"
@@ -360,13 +362,13 @@ Vue.component("wiki-home-page", {
                                 href="#">{{ db.name }}</a>
                         </li>
                     </template>
-                </ol>
+                </ul>
             </div>
             <div class="wiki_space_3"></div>
             <div class="wiki_subtitle">
                 <span class="wiki_subtitle_text">Otras operaciones disponibles</span>
             </div>
-            <ol style="padding-top: 0px;">
+            <ul style="padding-top: 0px;">
                 <li><a href="#"
                         v-on:click="_onClickCreateDatabase">Crear base de datos</a></li>
                 <!--li><a href="#"
@@ -374,7 +376,7 @@ Vue.component("wiki-home-page", {
                 <li><a class="danger_text"
                         href="#"
                         v-on:click="_onClickDeleteDatabase">Eliminar base de datos</a></li>
-            </ol>
+            </ul>
             <c-dialog ref="dialogo_crear_base_de_datos">
                 <template slot="title">Crear base de datos</template>
                 <template slot="body">
@@ -738,15 +740,55 @@ Vue.component("wiki-database-page", {
             <!--div class="wiki_subtitle">
                 <span class="wiki_subtitle_text">Inicio</span>
             </div-->
-            <div class="wiki_subtitle">BD: {{ root.selected_database }}</div>
-            <div class="wiki_paragraph">Clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a> para volver a inicio.</div>
+            
+            <div class="wiki_paragraph">Estás en: <b>{{ root.selected_database }}</b>.</div>
+            <div class="wiki_paragraph"></div>
             <div class="wiki_space_3"></div>
             <div class="wiki_subtitle">
-                <span class="wiki_subtitle_text">Tablas</span>
-                <span class="wiki_controls">
-                    <button class="stretch_button">⟳</button>
-                </span>
+                <span class="wiki_subtitle_text">Tamaño</span>
             </div>
+            <div class="wiki_paragraph" v-if="typeof selected_database_size === 'number'">La base de datos ocupa {{ selected_database_size }} bytes.</div>
+            <template v-if="selected_database_schema && Object.keys(selected_database_schema).length">
+                <div class="wiki_space_3"></div>
+                <div class="wiki_subtitle">
+                    <span class="wiki_subtitle_text">Tablas</span>
+                    <span class="wiki_controls">
+                        <button class="stretch_button">⟳</button>
+                    </span>
+                </div>
+                <ul>
+                    <li v-for="table, table_name in selected_database_schema" v-bind:key="'table_item_in_choosable_' + table_name">
+                        <a href="#">{{ table_name }}</a>
+                    </li>
+                </ul>
+            </template>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Esquema</span>
+            </div>
+            <div class="wiki_paragraph" v-if="typeof selected_database_size === 'number' && selected_database_size !== 0">La base de datos tiene el siguiente esquema:</div>
+            <div class="wiki_paragraph" v-else>La base de datos no tiene esquema actualmente.</div>
+            <ul v-if="selected_database_schema">
+                <li v-for="table, table_name in selected_database_schema" v-bind:key="'table_item_' + table_name">
+                    <div>
+                        <span>{{ table_name }}</span>
+                    </div>
+                    <ul v-if="table.indexes">
+                        <li v-if="table.keyPath">
+                            <div>
+                                <span><u><b>{{ table.keyPath }}</b></u> <sup v-if="table.autoIncrement">autoincremental</sup></span>
+                            </div>
+                        </li>
+                        <li v-for="table_index, table_index_order in table.indexes" v-bind:key="'table_index_item_' + table_index_order">
+                            <div>
+                                <span>{{ table_index.keyPath }}</span>
+                                <span>{{ table_index.unique ? " (unique)" : "" }}</span>
+                                <span>{{ table_index.multiEntry ? " (multientry)" : "" }}</span>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
 </div>`,
@@ -758,11 +800,17 @@ Vue.component("wiki-database-page", {
   },
   data() {
     return {
-      
+      selected_database: undefined,
+      selected_database_size: undefined,
+      selected_database_schema: undefined,
     }
   },
   methods: {
-    
+    async loadDatabaseInfo() {
+      this.selected_database = this.root.selected_database;
+      this.selected_database_size = await this.$browsie.constructor.getDatabaseSize(this.selected_database);
+      this.selected_database_schema = await this.$browsie.constructor.getSchema(this.selected_database);
+    }
   },
   watch: {
     
@@ -770,8 +818,9 @@ Vue.component("wiki-database-page", {
   beforeCreate() { },
   created() { },
   beforeMount() { },
-  mounted() {
+  async mounted() {
     this.$logger.trace("wiki-database-page.mounted", arguments);
+    await this.loadDatabaseInfo();
   },
   beforeUpdate() { },
   updated() { },

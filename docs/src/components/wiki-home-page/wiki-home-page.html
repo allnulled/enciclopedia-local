@@ -21,7 +21,7 @@
             <div class="wiki_list_viewer"
                 style="padding: 0px;">
                 <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
-                <ol v-else="">
+                <ul v-else="">
                     <template v-for="db, dbIndex in filtered_databases">
                         <li v-bind:key="'available_database_' + dbIndex">
                             <a class="accessible_text display_block"
@@ -29,13 +29,13 @@
                                 href="#">{{ db.name }}</a>
                         </li>
                     </template>
-                </ol>
+                </ul>
             </div>
             <div class="wiki_space_3"></div>
             <div class="wiki_subtitle">
                 <span class="wiki_subtitle_text">Otras operaciones disponibles</span>
             </div>
-            <ol style="padding-top: 0px;">
+            <ul style="padding-top: 0px;">
                 <li><a href="#"
                         v-on:click="_onClickCreateDatabase">Crear base de datos</a></li>
                 <!--li><a href="#"
@@ -43,7 +43,7 @@
                 <li><a class="danger_text"
                         href="#"
                         v-on:click="_onClickDeleteDatabase">Eliminar base de datos</a></li>
-            </ol>
+            </ul>
             <c-dialog ref="dialogo_crear_base_de_datos">
                 <template slot="title">Crear base de datos</template>
                 <template slot="body">
