@@ -194,12 +194,12 @@ u {
     /* Imitamos el borde inferior: */
     border-bottom: 1px solid var(--border-color-1);
     border-bottom: 0px solid var(--border-color-title);
+    border-bottom: 1px solid #D0D0D0;
     color: var(--color-title);
+    color: #223;
     text-shadow: 0 0 1px #888;
     /* Apañamos unos espacios: */
     padding: 0px;
-    background-color: var(--color-title);
-    color: white;
     /* Aplicamos flex: */
     display: flex;
     flex-direction: row;
@@ -368,9 +368,22 @@ sub {
     overflow: scroll;
     resize: vertical;
 }
-.danger_text {
-    color: rgb(84, 2, 2);
+/* Accessible text in GREEN (default) */
+.accessible_text,
+.accessible_text:visited,
+.accessible_text:active {
+    color: rgb(14, 50, 8);
 }
+.accessible_text:hover {
+    color: rgb(41, 161, 20);
+}
+.accessible_text.marked {
+    background-color:rgb(164, 205, 157);
+    color:rgb(23, 67, 15);
+}
+
+/* Danger text */
+.danger_text,
 .danger_text:visited,
 .danger_text:active {
     color: rgb(84, 2, 2);
@@ -378,15 +391,14 @@ sub {
 .danger_text:hover {
     color: red;
 }
-.accessible_text {
-    color: rgb(14, 50, 8);
+.danger_text.marked {
+    background-color:rgb(232, 214, 190);
+    color: red;
 }
-.accessible_text:visited,
-.accessible_text:active {
-    color: rgb(14, 50, 8);
-}
-.accessible_text:hover {
-    color: rgb(41, 161, 20);
+
+.display_block {
+    display: block;
+    padding: 2px;
 }
 .app {
     
@@ -468,7 +480,38 @@ sub {
     transition: opacity 0s ease;
     opacity: 0;
 }
-  
+
+.c-dialog .error_content {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.c-dialog .error_box {
+    border: 1px solid red;
+    max-height: 160px;
+    overflow: scroll;
+    background-color: #d9a3a3;
+    color: rgb(50, 5, 5);
+    padding: 4px;
+    padding-bottom: 20px;
+    padding-top: 4px;
+    cursor: pointer;
+}
+.c-dialog .error_info_item {
+
+}
+pre.default_codeviewer {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: transparent;
+    font-family: monospace;
+    font-size: 10px !important;
+    border: none;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-wrap: wrap;
+}
+
 .c-title > h3 {
     font-size: 12px;
     font-family: Arial;
@@ -479,5 +522,11 @@ sub {
 }
 .home-page {}
 .wiki-home-page {}
+
+.wiki-home-page {}
+
+.wiki-home-page {}
+
+.wiki-database-page {}
 
 

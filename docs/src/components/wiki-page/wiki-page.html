@@ -6,7 +6,7 @@
         </div>
     </div>
     <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
-        <component :is="'wiki-home-page'" :root="this"></component>
+        <component :is="selected_page" :root="this"></component>
     </div>
     <c-dialog ref="dialogo_de_menu_principal">
         <template slot="title">Secciones generales</template>
@@ -15,13 +15,13 @@
                 <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
                 <ol>
                     <li>
-                        <a href="#">Sección de inicio</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-home-page')">Sección de inicio</a>
                     </li>
                     <li>
-                        <a href="#">Sección de buscador</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-searcher-page')">Sección de buscador</a>
                     </li>
                     <li>
-                        <a href="#">Sección de configuraciones</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-settings-page')">Sección de configuraciones</a>
                     </li>
                 </ol>
             </div>

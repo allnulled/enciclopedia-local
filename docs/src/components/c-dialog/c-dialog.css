@@ -75,4 +75,34 @@
     transition: opacity 0s ease;
     opacity: 0;
 }
-  
+
+.c-dialog .error_content {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.c-dialog .error_box {
+    border: 1px solid red;
+    max-height: 160px;
+    overflow: scroll;
+    background-color: #d9a3a3;
+    color: rgb(50, 5, 5);
+    padding: 4px;
+    padding-bottom: 20px;
+    padding-top: 4px;
+    cursor: pointer;
+}
+.c-dialog .error_info_item {
+
+}
+pre.default_codeviewer {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: transparent;
+    font-family: monospace;
+    font-size: 10px !important;
+    border: none;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-wrap: wrap;
+}

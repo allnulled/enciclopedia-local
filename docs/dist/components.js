@@ -69,26 +69,18 @@ Vue.component("c-dialog", {
                                 <div style="flex: 100; overflow: scroll; padding: 4px 6px;">
                                     <slot name="body"></slot>
                                 </div>
-                                <div style="flex: 1;"
+                                <div class="bodyfooter" style="flex: 1;"
                                     v-if="$slots.bodyfooter">
-                                    <div class="" style="position: relative;" v-if="error">
-                                        <div class="" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
-                                            <div v-if="error instanceof Error">
-                                                <div>
-                                                    <span>Error: </span>
-                                                    <span>{{ error.name }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Message: </span>
-                                                    <span>{{ error.message }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Trace: </span>
-                                                    <span>{{ error.stack }}</span>
+                                    <div class="error_container" style="position: relative;" v-if="error" v-on:click="clearError">
+                                        <div class="error_content" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
+                                            <div class="error_box" v-if="error instanceof $window.Error">
+                                                <div class="error_info_item">
+                                                    <pre class="default_codeviewer">{{ error.name }}: {{ error.message }}.
+{{ formatAndGroupStackTrace(error.stack) }}</pre>
                                                 </div>
                                             </div>
-                                            <div v-else="">
-                                                <div>{{ error }}</div>
+                                            <div class="error_box" v-else="">
+                                                <div class="error_info_item">{{ error }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -163,7 +155,64 @@ Vue.component("c-dialog", {
     },
     clearError() {
       this.error = false;
-    }
+    },
+    formatStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Procesar cada línea para hacerla más legible
+      const formatted = lines.map((line) => {
+        // Separar el método, archivo y ubicación (si aplica)
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          return `@${file}\n  ${line}:${column}:${(method || "(anonymous)").trim()}`;
+        }
+        return line; // Si no coincide con el patrón esperado
+      });
+    
+      // Unir líneas procesadas
+      return formatted.join("\n");
+    },
+    formatAndGroupStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Mapa para agrupar por archivo
+      const grouped = {};
+    
+      lines.forEach((line) => {
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          const location = {
+            method: method || "(anonymous)",
+            line: parseInt(line, 10),
+            column: parseInt(column, 10),
+          };
+    
+          // Agrupar por archivo
+          if (!grouped[file]) grouped[file] = [];
+          grouped[file].push(location);
+        }
+      });
+    
+      // Construir salida agrupada y ordenada
+      let result = "";
+      for (const file in grouped) {
+        // Ordenar ubicaciones por número de línea
+        grouped[file].sort((a, b) => a.line - b.line || a.column - b.column);
+    
+        // Construir sección del archivo
+        result += `File: ${file}\n`;
+        grouped[file].forEach(({ line, column, method }) => {
+          result += `  @${line}:${column}::${method}\n`;
+        });
+        result += "\n";
+      }
+    
+      return result.trim();
+    }    
   },
   watch: {}
 });
@@ -199,7 +248,7 @@ Vue.component("wiki-page", {
         </div>
     </div>
     <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
-        <component :is="'wiki-home-page'" :root="this"></component>
+        <component :is="selected_page" :root="this"></component>
     </div>
     <c-dialog ref="dialogo_de_menu_principal">
         <template slot="title">Secciones generales</template>
@@ -208,13 +257,13 @@ Vue.component("wiki-page", {
                 <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
                 <ol>
                     <li>
-                        <a href="#">Sección de inicio</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-home-page')">Sección de inicio</a>
                     </li>
                     <li>
-                        <a href="#">Sección de buscador</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-searcher-page')">Sección de buscador</a>
                     </li>
                     <li>
-                        <a href="#">Sección de configuraciones</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-settings-page')">Sección de configuraciones</a>
                     </li>
                 </ol>
             </div>
@@ -231,44 +280,36 @@ Vue.component("wiki-page", {
 </div>`,
   props: {},
   data() {
-    return {}
+    return {
+      selected_page: 'wiki-home-page',
+      selected_database: undefined,
+    }
   },
   methods: {
+    selectPage(page) {
+      if(this.$refs.dialogo_de_menu_principal) {
+        this.$refs.dialogo_de_menu_principal.close();
+      }
+      this.selected_page = page;
+    },
+    selectDatabase(db) {
+      this.selected_database = db;
+      this.selected_page = 'wiki-database-page';
+    },
     async listDatabases() {
       this.$logger.trace("wiki-page.listDatabases", arguments);
-      const allDatabases = await this.$window.Webmarket.listDatabases();
-      const APP_MARKET_PREFIX = "webmarket.enciclopedia_local.";
-      return allDatabases.filter(dbName => dbName.startsWith(APP_MARKET_PREFIX)).map(dbName => dbName.replace(APP_MARKET_PREFIX, ""));
+      return await this.$browsie.constructor.listDatabases();
     },
-    _correctDBName(name, alsoPrependReal = true) {
-      const name2 = name.replace(/^(webmarket\.)(enciclopedia_local\.)?/g, "");
-      if(alsoPrependReal) {
-        return "webmarket.enciclopedia_local." + name2;
-      } else {
-        return name2;
-      }
-    },
-    async createDatabase(name) {
+    async createDatabase(name, schema = {}) {
       this.$logger.trace("wiki-page.createDatabase", arguments);
-      return await this.$window.Webmarket.open(this._correctDBName(name));
+      this.$ensure({ name }).type("string");
+      this.$ensure({ schema }).type("object");
+      return await this.$browsie.constructor.createDatabase(name, schema);
     },
     async deleteDatabase(name) {
       this.$logger.trace("wiki-page.deleteDatabase", arguments);
-      const request = indexedDB.deleteDatabase("webmarket.enciclopedia_local.Whereeee");
-      return new Promise((resolve, reject) => {
-        request.onsuccess = function () {
-          console.log(`[*] Base de datos '${name}' eliminada exitosamente.`);
-          return resolve(request);
-        };
-        request.onerror = function (event) {
-          console.error(`[!] Error al eliminar la base de datos '${name}':`, event.target.error);
-          return reject(event);
-        };
-        request.onblocked = function () {
-          console.warn(`[!] La eliminación de la base de datos '${name}' está bloqueada. Cierra otras pestañas o procesos usando esta base de datos.`);
-          return reject(request);
-        };
-      });
+      this.$ensure({ name }).type("string");
+      return await this.$browsie.constructor.deleteDatabase(name);
     }
   },
   watch: {},
@@ -303,22 +344,24 @@ Vue.component("wiki-home-page", {
                         v-on:click="loadDatabases">⟳</button>
                 </span>
             </div>
+            <input v-model="database_text_filter"
+                style="width: 100%;"
+                type="search"
+                v-autofocus
+                placeholder="Filtra bases de datos aquí" />
             <div class="wiki_list_viewer"
                 style="padding: 0px;">
                 <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
                 <ol v-else="">
                     <template v-for="db, dbIndex in filtered_databases">
                         <li v-bind:key="'available_database_' + dbIndex">
-                            <a class="accessible_text"
-                                href="#">{{ db }}</a>
+                            <a class="accessible_text display_block"
+                                v-on:click="() => root.selectDatabase(db.name)"
+                                href="#">{{ db.name }}</a>
                         </li>
                     </template>
                 </ol>
             </div>
-            <input v-model="database_text_filter"
-                style="width: 100%;"
-                type="search"
-                placeholder="Filtra bases de datos aquí">
             <div class="wiki_space_3"></div>
             <div class="wiki_subtitle">
                 <span class="wiki_subtitle_text">Otras operaciones disponibles</span>
@@ -326,8 +369,8 @@ Vue.component("wiki-home-page", {
             <ol style="padding-top: 0px;">
                 <li><a href="#"
                         v-on:click="_onClickCreateDatabase">Crear base de datos</a></li>
-                <li><a href="#"
-                        v-on:click="_onClickRenameDatabase">Renombrar base de datos</a></li>
+                <!--li><a href="#"
+                        v-on:click="_onClickRenameDatabase">Renombrar base de datos</a></li-->
                 <li><a class="danger_text"
                         href="#"
                         v-on:click="_onClickDeleteDatabase">Eliminar base de datos</a></li>
@@ -343,7 +386,8 @@ Vue.component("wiki-home-page", {
                             v-autofocus
                             v-on:keypress.enter="_onClickAcceptCreateDatabase"
                             v-on:keyup.esc="_onClickCancelCreateDatabase" />
-                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#" v-on:click="_onClickAcceptCreateDatabase">Crear</a>.</div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#"
+                                v-on:click="_onClickAcceptCreateDatabase">Crear</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
@@ -353,7 +397,7 @@ Vue.component("wiki-home-page", {
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás por crear una base de datos.</span>
                 </template>
             </c-dialog>
             <c-dialog ref="dialogo_renombrar_base_de_datos">
@@ -367,8 +411,10 @@ Vue.component("wiki-home-page", {
                             <ol v-else="">
                                 <template v-for="db, dbIndex in filtered_databases">
                                     <li v-bind:key="'available_database_' + dbIndex">
-                                        <a class="accessible_text"
-                                            href="#">{{ db }}</a>
+                                        <a class="accessible_text display_block"
+                                        :class="{marked:rename_database_name === db.name}"
+                                        v-on:click="() => _setAsDatabaseToRename(db.name)"
+                                            href="#">{{ db.name }}</a>
                                     </li>
                                 </template>
                             </ol>
@@ -376,21 +422,23 @@ Vue.component("wiki-home-page", {
                         <div class="wiki_paragraph"><b>Paso 2.</b> Escribe el nuevo nombre de la base de datos:</div>
                         <input style="width:100%;"
                             type="text"
-                            v-model="new_database_name"
+                            ref="rename_database_input"
+                            v-model="rename_database_name_new"
                             v-autofocus
-                            v-on:keypress.enter="_onClickAcceptCreateDatabase"
-                            v-on:keyup.esc="_onClickCancelCreateDatabase" />
-                        <div class="wiki_paragraph"><b>Paso 3.</b> Clica a 'Renombrar'</div>
+                            v-on:keypress.enter="_onClickAcceptRenameDatabase"
+                            v-on:keyup.esc="_onClickCancelRenameDatabase" />
+                        <div class="wiki_paragraph"><b>Paso 3.</b> Clica a <a href="#"
+                                v-on:click="_onClickAcceptRenameDatabase">Renombrar</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
                     <div style="text-align: right; padding: 4px;">
-                        <button v-on:click="_onClickAcceptCreateDatabase">Renombrar</button>
-                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                        <button v-on:click="_onClickAcceptRenameDatabase">Renombrar</button>
+                        <button v-on:click="_onClickCancelRenameDatabase">Cancelar</button>
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás en el diálogo de renombrar base de datos.</span>
                 </template>
             </c-dialog>
             <c-dialog ref="dialogo_eliminar_base_de_datos">
@@ -404,23 +452,25 @@ Vue.component("wiki-home-page", {
                             <ol v-else="">
                                 <template v-for="db, dbIndex in filtered_databases">
                                     <li v-bind:key="'available_database_' + dbIndex">
-                                        <a class="accessible_text"
-                                            href="#">{{ db }}</a>
+                                        <a class="accessible_text display_block danger_text"
+                                        :class="{marked:delete_database_name === db.name}"
+                                        v-on:click="() => _setAsDatabaseToDelete(db.name)"
+                                        href="#">{{ db.name }}</a>
                                     </li>
                                 </template>
                             </ol>
                         </div>
-                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a 'Eliminar':</div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#" v-on:click="_onClickAcceptDeleteDatabase">Eliminar</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
                     <div style="text-align: right; padding: 4px;">
-                        <button v-on:click="_onClickAcceptCreateDatabase">Eliminar</button>
-                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                        <button v-on:click="_onClickAcceptDeleteDatabase">Eliminar</button>
+                        <button v-on:click="_onClickCancelDeleteDatabase">Cancelar</button>
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás por eliminar una base de datos.</span>
                 </template>
             </c-dialog>
             <div class="wiki_space_3"></div>
@@ -456,6 +506,8 @@ Vue.component("wiki-home-page", {
       available_databases: [],
       filtered_databases: [],
       new_database_name: "",
+      rename_database_name: undefined,
+      rename_database_name_new: undefined,
       delete_database_name: undefined
     }
   },
@@ -464,6 +516,15 @@ Vue.component("wiki-home-page", {
       this.$logger.trace("wiki-home-page.loadDatabases", arguments);
       this.available_databases = await this.root.listDatabases();
       this._synchronizeFilteredDatabases();
+    },
+    _setAsDatabaseToRename(db) {
+      this.$logger.trace("wiki-home-page._setAsDatabaseToRename", arguments);
+      this.rename_database_name = db;
+      this.rename_database_name_new = db;
+    },
+    _setAsDatabaseToDelete(db) {
+      this.$logger.trace("wiki-home-page._setAsDatabaseToDelete", arguments);
+      this.delete_database_name = db;
     },
     async _onClickCreateDatabase() {
       this.$logger.trace("wiki-home-page._onClickCreateDatabase", arguments);
@@ -487,7 +548,7 @@ Vue.component("wiki-home-page", {
     _onClickAcceptCreateDatabase() {
       this.$logger.trace("wiki-home-page._onClickAcceptCreateDatabase", arguments);
       if(!this.new_database_name) {
-        this.$refs.dialogo_crear_base_de_datos.setError(new Error("El nombre de la base de datos no puede estar vacío"));
+        this.$refs.dialogo_crear_base_de_datos.setError(new Error("Debe de haber un nombre de base de datos antes de poder crearla"));
         return;
       }
       return this.$refs.dialogo_crear_base_de_datos.set(this.new_database_name).close();
@@ -498,7 +559,33 @@ Vue.component("wiki-home-page", {
     },
     _onClickRenameDatabase() {
       this.$logger.trace("wiki-home-page._onClickRenameDatabase", arguments);
-      return this.$refs.dialogo_renombrar_base_de_datos.open();
+      this.$refs.dialogo_renombrar_base_de_datos.open();
+      return this._setAsDatabaseToRename("");
+    },
+    _onClickAcceptRenameDatabase() {
+      this.$logger.trace("wiki-home-page._onClickAcceptRenameDatabase", arguments);
+      if(!this.rename_database_name) {
+        this.$refs.dialogo_renombrar_base_de_datos.setError(new Error("El nombre de la base de datos no puede estar vacío"));
+        return;
+      }
+      return this.$refs.dialogo_renombrar_base_de_datos.close();
+    },
+    _onClickCancelRenameDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCancelRenameDatabase", arguments);
+      return this.$refs.dialogo_renombrar_base_de_datos.close();
+    },
+    async _onClickAcceptDeleteDatabase() {
+      this.$logger.trace("wiki-home-page._onClickAcceptDeleteDatabase", arguments);
+      if(!this.delete_database_name) {
+        this.$refs.dialogo_eliminar_base_de_datos.setError(new Error("Debe de haber una base de datos seleccionada antes de poder eliminarla"));
+        return;
+      }
+      await this.root.deleteDatabase(this.delete_database_name);
+      return this.$refs.dialogo_eliminar_base_de_datos.close();
+    },
+    _onClickCancelDeleteDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCancelDeleteDatabase", arguments);
+      return this.$refs.dialogo_eliminar_base_de_datos.close();
     },
     _synchronizeFilteredDatabases() {
       this.$logger.trace("wiki-home-page._synchronizeFilteredDatabases", arguments);
@@ -507,7 +594,7 @@ Vue.component("wiki-home-page", {
       if (textFilter.length !== 0) {
         for (let index = 0; index < this.available_databases.length; index++) {
           const db = this.available_databases[index];
-          const hasMatch = this.root._correctDBName(db, false).indexOf(textFilter) === -1;
+          const hasMatch = JSON.stringify(db).toLowerCase().indexOf(textFilter.toLowerCase()) === -1;
           if (hasMatch) {
             databaseList.push(db);
           }
@@ -535,6 +622,156 @@ Vue.component("wiki-home-page", {
   mounted() {
     this.$logger.trace("wiki-home-page.mounted", arguments);
     this.loadDatabases();
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-settings-page", {
+  name: "wiki-settings-page",
+  template: `<div class="wiki-settings-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            Settings page
+            <div class="wiki_paragraph">Esto es la página de configuraciones <sup><a href="#references">[ 1 ]</a></sup>. Para ir a inicio, clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a></div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Bases de datos disponibles</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-settings-page.mounted", arguments);
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-searcher-page", {
+  name: "wiki-searcher-page",
+  template: `<div class="wiki-searcher-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            Searcher page
+            <div class="wiki_paragraph">Esto es la página de configuraciones <sup><a href="#references">[ 1 ]</a></sup>. Para ir a inicio, clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a></div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Bases de datos disponibles</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-searcher-page.mounted", arguments);
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-database-page", {
+  name: "wiki-database-page",
+  template: `<div class="wiki-database-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            <div class="wiki_subtitle">BD: {{ root.selected_database }}</div>
+            <div class="wiki_paragraph">Clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a> para volver a inicio.</div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Tablas</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-database-page.mounted", arguments);
   },
   beforeUpdate() { },
   updated() { },

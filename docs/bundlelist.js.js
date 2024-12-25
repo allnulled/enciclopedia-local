@@ -5,7 +5,7 @@ module.exports = [
   __dirname + "/src/external/ensure.js",
   __dirname + "/src/external/ufs.js",
   __dirname + "/src/external/store.unbundled.js",
-  __dirname + "/src/external/webmarket.js",
+  __dirname + "/src/external/browsie.js",
   __dirname + "/src/external/sql-wasm.js",
   __dirname + "/src/external/sqlite-polyfill.js",
   __dirname + "/src/external/sqlite-data-system.unbundled.js",

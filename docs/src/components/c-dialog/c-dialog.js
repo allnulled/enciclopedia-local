@@ -60,7 +60,64 @@ Vue.component("c-dialog", {
     },
     clearError() {
       this.error = false;
-    }
+    },
+    formatStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Procesar cada línea para hacerla más legible
+      const formatted = lines.map((line) => {
+        // Separar el método, archivo y ubicación (si aplica)
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          return `@${file}\n  ${line}:${column}:${(method || "(anonymous)").trim()}`;
+        }
+        return line; // Si no coincide con el patrón esperado
+      });
+    
+      // Unir líneas procesadas
+      return formatted.join("\n");
+    },
+    formatAndGroupStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Mapa para agrupar por archivo
+      const grouped = {};
+    
+      lines.forEach((line) => {
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          const location = {
+            method: method || "(anonymous)",
+            line: parseInt(line, 10),
+            column: parseInt(column, 10),
+          };
+    
+          // Agrupar por archivo
+          if (!grouped[file]) grouped[file] = [];
+          grouped[file].push(location);
+        }
+      });
+    
+      // Construir salida agrupada y ordenada
+      let result = "";
+      for (const file in grouped) {
+        // Ordenar ubicaciones por número de línea
+        grouped[file].sort((a, b) => a.line - b.line || a.column - b.column);
+    
+        // Construir sección del archivo
+        result += `File: ${file}\n`;
+        grouped[file].forEach(({ line, column, method }) => {
+          result += `  @${line}:${column}::${method}\n`;
+        });
+        result += "\n";
+      }
+    
+      return result.trim();
+    }    
   },
   watch: {}
 });

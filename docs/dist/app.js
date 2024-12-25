@@ -17533,227 +17533,388 @@ return Store;
 (function (factory) {
   const mod = factory();
   if (typeof window !== 'undefined') {
-    window["Webmarket"] = mod;
+    window["Browsie"] = mod;
   }
   if (typeof global !== 'undefined') {
-    // global["Webmarket"] = mod;
+    // global["Browsie"] = mod;
   }
   if (typeof module !== 'undefined') {
     // module.exports = mod;
   }
 })(function () {
 
-  class WebmarketBrowser {
+  class BrowsieStaticAPI {
 
-    static correctDBName(dbName) {
-      return "webmarket." + dbName.replace(/^webmarket\./g, "");
+    static openedConnections = [];
+
+    static _trace = true;
+
+    static trace(methodName, args = []) {
+      if (this._trace) {
+        console.log("[TRACE][" + methodName + "]", args.length + " args: " + Array.from(args).map(arg => typeof (arg)).join(", "));
+      }
     }
 
-    static create(...args) {
-      return new this(...args);
+    static async listDatabases() {
+      this.trace("Browsie.listDatabases", arguments);
+      try {
+        const databases = await indexedDB.databases();
+        return databases;
+      } catch (error) {
+        console.error('Error al obtener las bases de datos:', error);
+      }
     }
 
-    static open(...args) {
-      const wm = this.create(...args);
-      return wm.init().then(db => {
-        return wm;
-      });
-    }
-
-    static init(...args) {
-      return this.create(...args).init();
-    }
-
-    /**
-     * Elimina una base de datos entera de la memoria.
-     * @param {String} dbName Nombre de la base de datos a eliminar.
-     * @returns 
-     * @throws Error de la base de datos. 
-     */
-    static deleteDatabase(dbName) {
+    // Crea la base de datos con el esquema final
+    static createDatabase(dbName, storeDefinitions) {
+      this.trace("Browsie.createDatabase", arguments);
       return new Promise((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(this.correctDBName(dbName));
-
+        const request = indexedDB.open(dbName);
         request.onsuccess = () => {
-          resolve(`Database "${dbName}" deleted successfully.`);
+          request.result.close();
+          resolve(request.result);
         };
+        request.onerror = (error) => reject(error);
 
-        request.onerror = (event) => {
-          reject(event.target.error);
-        };
-      });
-    }
-
-    /**
-     * Devuelve un array con los nombres de las bases de datos.
-     * @returns Promise<Array<String>>
-     * @throws Error de la base de datos. 
-     */
-    static listDatabases() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.databases();
-
-        request.then((databases) => {
-          resolve(databases.map(db => db.name).filter(db => db.startsWith("webmarket.")));
-        }).catch((error) => {
-          reject(error);
-        });
-      });
-    }
-
-    /**
-     * Crea una nueva instancia de Webmarket con el nombre de base de datos y store especificados.
-     * @param {string} [dbName="webmarket"] El nombre de la base de datos.
-     * @param {string} [storeName="webstore"] El nombre del store.
-     */
-    constructor(dbName = "webmarket") {
-      this.dbName = dbName;
-      this.storeName = "webstore";
-      this.db = null;
-    }
-
-    /**
-     * Inicializa la base de datos y se asegura de que el store exista.
-     */
-    async init() {
-      if (this.db) return this.db; // Ya está inicializado
-
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(this.constructor.correctDBName(this.dbName), 1); // Usamos versión 1 para evitar conflictos
-
+        // Establecemos el esquema final
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, { keyPath: "id", autoIncrement: true });
-          }
+          const storeKeys = Object.keys(storeDefinitions);
+          storeKeys.forEach(storeKey => {
+            const store = storeDefinitions[storeKey];
+            if (!db.objectStoreNames.contains(storeKey)) {
+              const objectStore = db.createObjectStore(storeKey, {
+                keyPath: "id",
+                autoIncrement: true,
+              });
+              for (let storeIndex of store) {
+                const storeName = storeIndex.replace(/^\!/g, "");
+                objectStore.createIndex(storeName, storeName, {
+                  unique: storeIndex.startsWith("!")
+                });
+              }
+            }
+          });
         };
+      });
+    }
+
+    // Obtener todos los datos de un store
+    static async getAllDataFromStore(dbName, storeName) {
+      this.trace("Browsie.getAllDataFromStore", arguments);
+      return await new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName);
 
         request.onsuccess = (event) => {
-          this.db = event.target.result;
-          resolve(this.db);
+          const db = event.target.result;
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+
+          const getAllRequest = store.getAll();
+          getAllRequest.onsuccess = () => resolve(getAllRequest.result);
+          getAllRequest.onerror = () => {
+            db.close();
+            reject(new Error('Error al obtener los datos del store'));
+          };
         };
 
-        request.onerror = (event) => {
-          reject(event.target.error);
+        request.onerror = () => {
+          reject(new Error('Error al abrir la base de datos'));
         };
       });
     }
 
-    /**
-     * Cambia la base de datos actual sin cambiar el store.
-     * @param {string} dbName El nuevo nombre de la base de datos.
-     */
-    async changeDatabase(dbName) {
-      this.dbName = dbName;
-      this.db = null; // Al cambiar la base de datos, cerramos la conexión actual
-      await this.init(); // Re-inicializamos con la nueva base de datos
-    }
+    // Insertar datos en un store
+    static async insertDataIntoStore(dbName, storeName, data) {
+      this.trace("Browsie.insertDataIntoStore", arguments);
+      return await new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName);
 
-    /**
-     * Recupera todos los elementos del store.
-     * @returns {Promise<any[]>} Una promesa que resuelve con todos los elementos del store.
-     */
-    async select() {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readonly");
-      const store = transaction.objectStore(this.storeName);
-      return new Promise((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+          const transaction = db.transaction(storeName, 'readwrite');
+          const store = transaction.objectStore(storeName);
+
+          data.forEach(item => store.add(item));
+
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => {
+            db.close();
+            reject(new Error('Error al insertar los datos en el store'));
+          };
+        };
+
+        request.onerror = () => {
+          reject(new Error('Error al abrir la base de datos'));
+        };
       });
     }
 
-    /**
-     * Recupera un elemento del store por su ID.
-     * @param {number|string} id El ID del elemento a recuperar.
-     * @returns {Promise<any>} Una promesa que resuelve con el elemento encontrado.
-     */
-    async selectById(id) {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readonly");
-      const store = transaction.objectStore(this.storeName);
+    // Eliminar una base de datos
+    static deleteDatabase(dbName) {
+      this.trace("Browsie.deleteDatabase", arguments);
       return new Promise((resolve, reject) => {
-        const request = store.get(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        const request = indexedDB.deleteDatabase(dbName);
+
+        request.onblocked = () => {
+          db.close();
+          reject(new Error("Error al eliminar la base de datos porque está bloqueada"));
+        };
+        request.onsuccess = () => resolve();
+        request.onerror = () => {
+          db.close();
+          reject(new Error('Error al eliminar la base de datos'));
+        };
       });
     }
 
-    /**
-     * Inserta un solo elemento en el store.
-     * @param {any} data El dato que se va a insertar.
-     * @returns {Promise<any>} Una promesa que resuelve con el ID del elemento insertado.
-     */
-    async insertOne(data) {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      return new Promise((resolve, reject) => {
-        const request = store.add({ data });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
+    static async getSchema(dbName) {
+      this.trace("Browsie.getSchema", arguments);
+      let db = undefined;
+      try {
+        // Abrir la base de datos en modo solo lectura
+        const request = indexedDB.open(dbName);
 
-    /**
-     * Inserta múltiples elementos en el store.
-     * @param {any[]} items Los elementos que se van a insertar.
-     * @returns {Promise<any[]>} Una promesa que resuelve con los resultados de las inserciones.
-     */
-    async insertMany(items) {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      const promises = items.map(item => new Promise((resolve, reject) => {
-        const request = store.add({ data: item });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      }));
-      return Promise.all(promises);
-    }
+        db = await new Promise((resolve, reject) => {
+          request.onsuccess = (event) => resolve(event.target.result);
+          request.onerror = () => {
+            reject(new Error('Error al abrir la base de datos'));
+          };
+        });
 
-    /**
-     * Actualiza un elemento existente en el store.
-     * @param {number|string} id El ID del elemento a actualizar.
-     * @param {any} data Los nuevos datos del elemento.
-     * @returns {Promise<any>} Una promesa que resuelve con el resultado de la actualización.
-     */
-    async updateOne(id, data) {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      return new Promise((resolve, reject) => {
-        const request = store.put({ id, data });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
+        // Construir el esquema a partir de los almacenes
+        const schema = {};
+        const objectStoreNames = Array.from(db.objectStoreNames); // Lista de stores
 
-    /**
-     * Elimina un elemento del store por su ID.
-     * @param {number|string} id El ID del elemento a eliminar.
-     * @returns {Promise<any>} Una promesa que resuelve con el resultado de la eliminación.
-     */
-    async deleteOne(id) {
-      const db = await this.init();
-      const transaction = db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      return new Promise((resolve, reject) => {
-        const request = store.delete(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+        objectStoreNames.forEach(storeName => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+
+          const storeInfo = {
+            keyPath: store.keyPath,
+            autoIncrement: store.autoIncrement,
+            indexes: []
+          };
+
+          // Recorrer los índices del store
+          const indexNames = Array.from(store.indexNames); // Lista de índices
+          indexNames.forEach(indexName => {
+            const index = store.index(indexName);
+            storeInfo.indexes.push({
+              name: index.name,
+              keyPath: index.keyPath,
+              unique: index.unique,
+              multiEntry: index.multiEntry
+            });
+          });
+
+          schema[storeName] = storeInfo;
+        });
+
+        return schema;
+      } catch (error) {
+        console.error('Error al obtener el esquema:', error);
+        throw error;
+      } finally {
+        if (db) {
+          db.close();
+        }
+      }
     }
 
   }
 
-  const Webmarket = typeof window !== "undefined" ? WebmarketBrowser : WebmarketNodejs;
+  class Browsie extends BrowsieStaticAPI {
 
-  return Webmarket;
+    static async open(...args) {
+      this.trace("Browsie.open", arguments);
+      const db = new this(...args);
+      await db.open();
+      return db;
+    }
+
+    // Constructor que abre la base de datos
+    constructor(dbName, trace = false) {
+      super();
+      this.dbName = dbName;
+      this.db = null;
+      this._trace = trace;
+    }
+
+    // Abre la base de datos
+    open() {
+      this.constructor.trace("browsie.open", arguments);
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName);
+
+        request.onsuccess = () => {
+          this.db = request.result;
+          resolve(this.db);
+        };
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.open» operation over database «${this.dbName}»: `));
+      });
+    }
+
+    close(...args) {
+      this.constructor.trace("browsie.close", arguments);
+      return this.db.close(...args);
+    }
+
+    // Método para seleccionar elementos de un store con un filtro
+    select(store, filter) {
+      this.constructor.trace("browsie.select", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readonly');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.getAll();
+
+        request.onsuccess = () => {
+          const result = request.result.filter(item => {
+            return Object.keys(filter).every(key => item[key] === filter[key]);
+          });
+          resolve(result);
+        };
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.select» operation over store «${store}»: `));
+      });
+    }
+
+    // Método para insertar un solo item en un store
+    insert(store, item) {
+      this.constructor.trace("browsie.insert", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.add(item);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.insert» operation over store «${store}»: `));
+      });
+    }
+
+    // Método para actualizar un item en un store
+    update(store, id, item) {
+      this.constructor.trace("browsie.update", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.put({ ...item, id });
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.update» operation over store «${store}»: `));
+      });
+    }
+
+    // Método para eliminar un item de un store por ID
+    delete(store, id) {
+      this.constructor.trace("browsie.delete", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.delete» operation over store «${store}»: `));
+      });
+    }
+
+    _expandError(errorObject, baseMessage = false) {
+      this.constructor.trace("browsie._expandError", arguments);
+      let error = errorObject;
+      if (errorObject instanceof Error) {
+        error = errorObject;
+      } else if (errorObject.target && errorObject.target.error) {
+        error = errorObject.target.error;
+      } else {
+        error = new Error(errorObject);
+      }
+      if (baseMessage) {
+        const errorTemp = new Error(error.message ?? error);
+        Object.assign(errorTemp, error);
+        errorTemp.message = baseMessage + errorTemp.message;
+        error = errorTemp;
+      }
+      return error;
+    }
+
+    // Método para insertar varios items en un store
+    insertMany(store, items) {
+      this.constructor.trace("browsie.insertMany", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        let insertedCount = 0;
+
+        items.forEach(item => {
+          const request = objectStore.add(item);
+          request.onsuccess = () => {
+            insertedCount++;
+            if (insertedCount === items.length) resolve();
+          };
+          request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.insertMany» operation over store «${store}» inserting «${items.length}» items: `));
+        });
+      });
+    }
+
+    // Método para actualizar varios items en un store
+    updateMany(store, filter, item) {
+      this.constructor.trace("browsie.updateMany", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.openCursor();
+        let updatedCount = 0;
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) {
+            if (Object.keys(filter).every(key => cursor.value[key] === filter[key])) {
+              const updatedItem = { ...cursor.value, ...item };
+              const updateRequest = cursor.update(updatedItem);
+              updateRequest.onsuccess = () => {
+                updatedCount++;
+                if (updatedCount === cursor.value.length) resolve();
+              };
+            }
+            cursor.continue();
+          }
+        };
+
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.updateMany» operation over store «${store}»: `));
+      });
+    }
+
+    // Método para eliminar varios items de un store según un filtro
+    deleteMany(store, filter) {
+      this.constructor.trace("browsie.deleteMany", arguments);
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(store, 'readwrite');
+        const objectStore = transaction.objectStore(store);
+        const request = objectStore.openCursor();
+
+        let deletedCount = 0;
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) {
+            if (Object.keys(filter).every(key => cursor.value[key] === filter[key])) {
+              const deleteRequest = cursor.delete();
+              deleteRequest.onsuccess = () => {
+                deletedCount++;
+                if (deletedCount === cursor.value.length) resolve();
+              };
+            }
+            cursor.continue();
+          }
+        };
+
+        request.onerror = (error) => reject(this._expandError(error, `Error on «browsie.deleteMany» operation over store «${store}»: `));
+      });
+    }
+  }
+
+  Browsie.default = Browsie;
+
+  return Browsie;
 
 });
-
 
 // We are modularizing this manually because the current modularize setting in Emscripten has some issues:
 // https://github.com/kripken/emscripten/issues/5820
@@ -18531,26 +18692,18 @@ Vue.component("c-dialog", {
                                 <div style="flex: 100; overflow: scroll; padding: 4px 6px;">
                                     <slot name="body"></slot>
                                 </div>
-                                <div style="flex: 1;"
+                                <div class="bodyfooter" style="flex: 1;"
                                     v-if="$slots.bodyfooter">
-                                    <div class="" style="position: relative;" v-if="error">
-                                        <div class="" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
-                                            <div v-if="error instanceof Error">
-                                                <div>
-                                                    <span>Error: </span>
-                                                    <span>{{ error.name }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Message: </span>
-                                                    <span>{{ error.message }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Trace: </span>
-                                                    <span>{{ error.stack }}</span>
+                                    <div class="error_container" style="position: relative;" v-if="error" v-on:click="clearError">
+                                        <div class="error_content" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
+                                            <div class="error_box" v-if="error instanceof $window.Error">
+                                                <div class="error_info_item">
+                                                    <pre class="default_codeviewer">{{ error.name }}: {{ error.message }}.
+{{ formatAndGroupStackTrace(error.stack) }}</pre>
                                                 </div>
                                             </div>
-                                            <div v-else="">
-                                                <div>{{ error }}</div>
+                                            <div class="error_box" v-else="">
+                                                <div class="error_info_item">{{ error }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -18625,7 +18778,64 @@ Vue.component("c-dialog", {
     },
     clearError() {
       this.error = false;
-    }
+    },
+    formatStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Procesar cada línea para hacerla más legible
+      const formatted = lines.map((line) => {
+        // Separar el método, archivo y ubicación (si aplica)
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          return `@${file}\n  ${line}:${column}:${(method || "(anonymous)").trim()}`;
+        }
+        return line; // Si no coincide con el patrón esperado
+      });
+    
+      // Unir líneas procesadas
+      return formatted.join("\n");
+    },
+    formatAndGroupStackTrace(stackTrace) {
+      // Dividir por líneas y limpiar espacios extra
+      const lines = stackTrace.split(/\s+/).filter(Boolean);
+    
+      // Mapa para agrupar por archivo
+      const grouped = {};
+    
+      lines.forEach((line) => {
+        const match = line.match(/^(.*?)(@|$)(.*?):(\d+):(\d+)$/);
+        if (match) {
+          const [, method, , file, line, column] = match;
+          const location = {
+            method: method || "(anonymous)",
+            line: parseInt(line, 10),
+            column: parseInt(column, 10),
+          };
+    
+          // Agrupar por archivo
+          if (!grouped[file]) grouped[file] = [];
+          grouped[file].push(location);
+        }
+      });
+    
+      // Construir salida agrupada y ordenada
+      let result = "";
+      for (const file in grouped) {
+        // Ordenar ubicaciones por número de línea
+        grouped[file].sort((a, b) => a.line - b.line || a.column - b.column);
+    
+        // Construir sección del archivo
+        result += `File: ${file}\n`;
+        grouped[file].forEach(({ line, column, method }) => {
+          result += `  @${line}:${column}::${method}\n`;
+        });
+        result += "\n";
+      }
+    
+      return result.trim();
+    }    
   },
   watch: {}
 });
@@ -18661,7 +18871,7 @@ Vue.component("wiki-page", {
         </div>
     </div>
     <div class="" style="border: 0px solid #333; box-sizing: border-box; min-height: 550px; overflow: scroll;">
-        <component :is="'wiki-home-page'" :root="this"></component>
+        <component :is="selected_page" :root="this"></component>
     </div>
     <c-dialog ref="dialogo_de_menu_principal">
         <template slot="title">Secciones generales</template>
@@ -18670,13 +18880,13 @@ Vue.component("wiki-page", {
                 <div class="wiki_paragraph_no_spaces">Escoge la sección a donde quieres ir:</div>
                 <ol>
                     <li>
-                        <a href="#">Sección de inicio</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-home-page')">Sección de inicio</a>
                     </li>
                     <li>
-                        <a href="#">Sección de buscador</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-searcher-page')">Sección de buscador</a>
                     </li>
                     <li>
-                        <a href="#">Sección de configuraciones</a>
+                        <a href="#" v-on:click="() => selectPage('wiki-settings-page')">Sección de configuraciones</a>
                     </li>
                 </ol>
             </div>
@@ -18693,44 +18903,36 @@ Vue.component("wiki-page", {
 </div>`,
   props: {},
   data() {
-    return {}
+    return {
+      selected_page: 'wiki-home-page',
+      selected_database: undefined,
+    }
   },
   methods: {
+    selectPage(page) {
+      if(this.$refs.dialogo_de_menu_principal) {
+        this.$refs.dialogo_de_menu_principal.close();
+      }
+      this.selected_page = page;
+    },
+    selectDatabase(db) {
+      this.selected_database = db;
+      this.selected_page = 'wiki-database-page';
+    },
     async listDatabases() {
       this.$logger.trace("wiki-page.listDatabases", arguments);
-      const allDatabases = await this.$window.Webmarket.listDatabases();
-      const APP_MARKET_PREFIX = "webmarket.enciclopedia_local.";
-      return allDatabases.filter(dbName => dbName.startsWith(APP_MARKET_PREFIX)).map(dbName => dbName.replace(APP_MARKET_PREFIX, ""));
+      return await this.$browsie.constructor.listDatabases();
     },
-    _correctDBName(name, alsoPrependReal = true) {
-      const name2 = name.replace(/^(webmarket\.)(enciclopedia_local\.)?/g, "");
-      if(alsoPrependReal) {
-        return "webmarket.enciclopedia_local." + name2;
-      } else {
-        return name2;
-      }
-    },
-    async createDatabase(name) {
+    async createDatabase(name, schema = {}) {
       this.$logger.trace("wiki-page.createDatabase", arguments);
-      return await this.$window.Webmarket.open(this._correctDBName(name));
+      this.$ensure({ name }).type("string");
+      this.$ensure({ schema }).type("object");
+      return await this.$browsie.constructor.createDatabase(name, schema);
     },
     async deleteDatabase(name) {
       this.$logger.trace("wiki-page.deleteDatabase", arguments);
-      const request = indexedDB.deleteDatabase("webmarket.enciclopedia_local.Whereeee");
-      return new Promise((resolve, reject) => {
-        request.onsuccess = function () {
-          console.log(`[*] Base de datos '${name}' eliminada exitosamente.`);
-          return resolve(request);
-        };
-        request.onerror = function (event) {
-          console.error(`[!] Error al eliminar la base de datos '${name}':`, event.target.error);
-          return reject(event);
-        };
-        request.onblocked = function () {
-          console.warn(`[!] La eliminación de la base de datos '${name}' está bloqueada. Cierra otras pestañas o procesos usando esta base de datos.`);
-          return reject(request);
-        };
-      });
+      this.$ensure({ name }).type("string");
+      return await this.$browsie.constructor.deleteDatabase(name);
     }
   },
   watch: {},
@@ -18765,22 +18967,24 @@ Vue.component("wiki-home-page", {
                         v-on:click="loadDatabases">⟳</button>
                 </span>
             </div>
+            <input v-model="database_text_filter"
+                style="width: 100%;"
+                type="search"
+                v-autofocus
+                placeholder="Filtra bases de datos aquí" />
             <div class="wiki_list_viewer"
                 style="padding: 0px;">
                 <div v-if="!filtered_databases">No hay bases de datos creadas. Crea una <a href="#">aquí</a>.</div>
                 <ol v-else="">
                     <template v-for="db, dbIndex in filtered_databases">
                         <li v-bind:key="'available_database_' + dbIndex">
-                            <a class="accessible_text"
-                                href="#">{{ db }}</a>
+                            <a class="accessible_text display_block"
+                                v-on:click="() => root.selectDatabase(db.name)"
+                                href="#">{{ db.name }}</a>
                         </li>
                     </template>
                 </ol>
             </div>
-            <input v-model="database_text_filter"
-                style="width: 100%;"
-                type="search"
-                placeholder="Filtra bases de datos aquí">
             <div class="wiki_space_3"></div>
             <div class="wiki_subtitle">
                 <span class="wiki_subtitle_text">Otras operaciones disponibles</span>
@@ -18788,8 +18992,8 @@ Vue.component("wiki-home-page", {
             <ol style="padding-top: 0px;">
                 <li><a href="#"
                         v-on:click="_onClickCreateDatabase">Crear base de datos</a></li>
-                <li><a href="#"
-                        v-on:click="_onClickRenameDatabase">Renombrar base de datos</a></li>
+                <!--li><a href="#"
+                        v-on:click="_onClickRenameDatabase">Renombrar base de datos</a></li-->
                 <li><a class="danger_text"
                         href="#"
                         v-on:click="_onClickDeleteDatabase">Eliminar base de datos</a></li>
@@ -18805,7 +19009,8 @@ Vue.component("wiki-home-page", {
                             v-autofocus
                             v-on:keypress.enter="_onClickAcceptCreateDatabase"
                             v-on:keyup.esc="_onClickCancelCreateDatabase" />
-                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#" v-on:click="_onClickAcceptCreateDatabase">Crear</a>.</div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#"
+                                v-on:click="_onClickAcceptCreateDatabase">Crear</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
@@ -18815,7 +19020,7 @@ Vue.component("wiki-home-page", {
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás por crear una base de datos.</span>
                 </template>
             </c-dialog>
             <c-dialog ref="dialogo_renombrar_base_de_datos">
@@ -18829,8 +19034,10 @@ Vue.component("wiki-home-page", {
                             <ol v-else="">
                                 <template v-for="db, dbIndex in filtered_databases">
                                     <li v-bind:key="'available_database_' + dbIndex">
-                                        <a class="accessible_text"
-                                            href="#">{{ db }}</a>
+                                        <a class="accessible_text display_block"
+                                        :class="{marked:rename_database_name === db.name}"
+                                        v-on:click="() => _setAsDatabaseToRename(db.name)"
+                                            href="#">{{ db.name }}</a>
                                     </li>
                                 </template>
                             </ol>
@@ -18838,21 +19045,23 @@ Vue.component("wiki-home-page", {
                         <div class="wiki_paragraph"><b>Paso 2.</b> Escribe el nuevo nombre de la base de datos:</div>
                         <input style="width:100%;"
                             type="text"
-                            v-model="new_database_name"
+                            ref="rename_database_input"
+                            v-model="rename_database_name_new"
                             v-autofocus
-                            v-on:keypress.enter="_onClickAcceptCreateDatabase"
-                            v-on:keyup.esc="_onClickCancelCreateDatabase" />
-                        <div class="wiki_paragraph"><b>Paso 3.</b> Clica a 'Renombrar'</div>
+                            v-on:keypress.enter="_onClickAcceptRenameDatabase"
+                            v-on:keyup.esc="_onClickCancelRenameDatabase" />
+                        <div class="wiki_paragraph"><b>Paso 3.</b> Clica a <a href="#"
+                                v-on:click="_onClickAcceptRenameDatabase">Renombrar</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
                     <div style="text-align: right; padding: 4px;">
-                        <button v-on:click="_onClickAcceptCreateDatabase">Renombrar</button>
-                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                        <button v-on:click="_onClickAcceptRenameDatabase">Renombrar</button>
+                        <button v-on:click="_onClickCancelRenameDatabase">Cancelar</button>
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás en el diálogo de renombrar base de datos.</span>
                 </template>
             </c-dialog>
             <c-dialog ref="dialogo_eliminar_base_de_datos">
@@ -18866,23 +19075,25 @@ Vue.component("wiki-home-page", {
                             <ol v-else="">
                                 <template v-for="db, dbIndex in filtered_databases">
                                     <li v-bind:key="'available_database_' + dbIndex">
-                                        <a class="accessible_text"
-                                            href="#">{{ db }}</a>
+                                        <a class="accessible_text display_block danger_text"
+                                        :class="{marked:delete_database_name === db.name}"
+                                        v-on:click="() => _setAsDatabaseToDelete(db.name)"
+                                        href="#">{{ db.name }}</a>
                                     </li>
                                 </template>
                             </ol>
                         </div>
-                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a 'Eliminar':</div>
+                        <div class="wiki_paragraph"><b>Paso 2.</b> Clica a <a href="#" v-on:click="_onClickAcceptDeleteDatabase">Eliminar</a>.</div>
                     </div>
                 </template>
                 <template slot="bodyfooter">
                     <div style="text-align: right; padding: 4px;">
-                        <button v-on:click="_onClickAcceptCreateDatabase">Eliminar</button>
-                        <button v-on:click="_onClickCancelCreateDatabase">Cancelar</button>
+                        <button v-on:click="_onClickAcceptDeleteDatabase">Eliminar</button>
+                        <button v-on:click="_onClickCancelDeleteDatabase">Cancelar</button>
                     </div>
                 </template>
                 <template slot="footer">
-                    <span class="status-bar-field">Estás en el menú principal.</span>
+                    <span class="status-bar-field">Estás por eliminar una base de datos.</span>
                 </template>
             </c-dialog>
             <div class="wiki_space_3"></div>
@@ -18918,6 +19129,8 @@ Vue.component("wiki-home-page", {
       available_databases: [],
       filtered_databases: [],
       new_database_name: "",
+      rename_database_name: undefined,
+      rename_database_name_new: undefined,
       delete_database_name: undefined
     }
   },
@@ -18926,6 +19139,15 @@ Vue.component("wiki-home-page", {
       this.$logger.trace("wiki-home-page.loadDatabases", arguments);
       this.available_databases = await this.root.listDatabases();
       this._synchronizeFilteredDatabases();
+    },
+    _setAsDatabaseToRename(db) {
+      this.$logger.trace("wiki-home-page._setAsDatabaseToRename", arguments);
+      this.rename_database_name = db;
+      this.rename_database_name_new = db;
+    },
+    _setAsDatabaseToDelete(db) {
+      this.$logger.trace("wiki-home-page._setAsDatabaseToDelete", arguments);
+      this.delete_database_name = db;
     },
     async _onClickCreateDatabase() {
       this.$logger.trace("wiki-home-page._onClickCreateDatabase", arguments);
@@ -18949,7 +19171,7 @@ Vue.component("wiki-home-page", {
     _onClickAcceptCreateDatabase() {
       this.$logger.trace("wiki-home-page._onClickAcceptCreateDatabase", arguments);
       if(!this.new_database_name) {
-        this.$refs.dialogo_crear_base_de_datos.setError(new Error("El nombre de la base de datos no puede estar vacío"));
+        this.$refs.dialogo_crear_base_de_datos.setError(new Error("Debe de haber un nombre de base de datos antes de poder crearla"));
         return;
       }
       return this.$refs.dialogo_crear_base_de_datos.set(this.new_database_name).close();
@@ -18960,7 +19182,33 @@ Vue.component("wiki-home-page", {
     },
     _onClickRenameDatabase() {
       this.$logger.trace("wiki-home-page._onClickRenameDatabase", arguments);
-      return this.$refs.dialogo_renombrar_base_de_datos.open();
+      this.$refs.dialogo_renombrar_base_de_datos.open();
+      return this._setAsDatabaseToRename("");
+    },
+    _onClickAcceptRenameDatabase() {
+      this.$logger.trace("wiki-home-page._onClickAcceptRenameDatabase", arguments);
+      if(!this.rename_database_name) {
+        this.$refs.dialogo_renombrar_base_de_datos.setError(new Error("El nombre de la base de datos no puede estar vacío"));
+        return;
+      }
+      return this.$refs.dialogo_renombrar_base_de_datos.close();
+    },
+    _onClickCancelRenameDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCancelRenameDatabase", arguments);
+      return this.$refs.dialogo_renombrar_base_de_datos.close();
+    },
+    async _onClickAcceptDeleteDatabase() {
+      this.$logger.trace("wiki-home-page._onClickAcceptDeleteDatabase", arguments);
+      if(!this.delete_database_name) {
+        this.$refs.dialogo_eliminar_base_de_datos.setError(new Error("Debe de haber una base de datos seleccionada antes de poder eliminarla"));
+        return;
+      }
+      await this.root.deleteDatabase(this.delete_database_name);
+      return this.$refs.dialogo_eliminar_base_de_datos.close();
+    },
+    _onClickCancelDeleteDatabase() {
+      this.$logger.trace("wiki-home-page._onClickCancelDeleteDatabase", arguments);
+      return this.$refs.dialogo_eliminar_base_de_datos.close();
     },
     _synchronizeFilteredDatabases() {
       this.$logger.trace("wiki-home-page._synchronizeFilteredDatabases", arguments);
@@ -18969,7 +19217,7 @@ Vue.component("wiki-home-page", {
       if (textFilter.length !== 0) {
         for (let index = 0; index < this.available_databases.length; index++) {
           const db = this.available_databases[index];
-          const hasMatch = this.root._correctDBName(db, false).indexOf(textFilter) === -1;
+          const hasMatch = JSON.stringify(db).toLowerCase().indexOf(textFilter.toLowerCase()) === -1;
           if (hasMatch) {
             databaseList.push(db);
           }
@@ -18997,6 +19245,156 @@ Vue.component("wiki-home-page", {
   mounted() {
     this.$logger.trace("wiki-home-page.mounted", arguments);
     this.loadDatabases();
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-settings-page", {
+  name: "wiki-settings-page",
+  template: `<div class="wiki-settings-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            Settings page
+            <div class="wiki_paragraph">Esto es la página de configuraciones <sup><a href="#references">[ 1 ]</a></sup>. Para ir a inicio, clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a></div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Bases de datos disponibles</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-settings-page.mounted", arguments);
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-searcher-page", {
+  name: "wiki-searcher-page",
+  template: `<div class="wiki-searcher-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            Searcher page
+            <div class="wiki_paragraph">Esto es la página de configuraciones <sup><a href="#references">[ 1 ]</a></sup>. Para ir a inicio, clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a></div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Bases de datos disponibles</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-searcher-page.mounted", arguments);
+  },
+  beforeUpdate() { },
+  updated() { },
+  beforeDestroy() { },
+  destroyed() { },
+  activated() { },
+  deactivated() { },
+});
+Vue.component("wiki-database-page", {
+  name: "wiki-database-page",
+  template: `<div class="wiki-database-page">
+    <div class="wiki_viewer">
+        <div class="wiki_content">
+            <!--div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Inicio</span>
+            </div-->
+            <div class="wiki_subtitle">BD: {{ root.selected_database }}</div>
+            <div class="wiki_paragraph">Clica <a href="#" v-on:click="() => root.selectPage('wiki-home-page')">aquí</a> para volver a inicio.</div>
+            <div class="wiki_space_3"></div>
+            <div class="wiki_subtitle">
+                <span class="wiki_subtitle_text">Tablas</span>
+                <span class="wiki_controls">
+                    <button class="stretch_button">⟳</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>`,
+  props: {
+    root: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      
+    }
+  },
+  methods: {
+    
+  },
+  watch: {
+    
+  },
+  beforeCreate() { },
+  created() { },
+  beforeMount() { },
+  mounted() {
+    this.$logger.trace("wiki-database-page.mounted", arguments);
   },
   beforeUpdate() { },
   updated() { },

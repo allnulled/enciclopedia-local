@@ -19,26 +19,18 @@
                                 <div style="flex: 100; overflow: scroll; padding: 4px 6px;">
                                     <slot name="body"></slot>
                                 </div>
-                                <div style="flex: 1;"
+                                <div class="bodyfooter" style="flex: 1;"
                                     v-if="$slots.bodyfooter">
-                                    <div class="" style="position: relative;" v-if="error">
-                                        <div class="" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
-                                            <div v-if="error instanceof Error">
-                                                <div>
-                                                    <span>Error: </span>
-                                                    <span>{{ error.name }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Message: </span>
-                                                    <span>{{ error.message }}</span>
-                                                </div>
-                                                <div>
-                                                    <span>Trace: </span>
-                                                    <span>{{ error.stack }}</span>
+                                    <div class="error_container" style="position: relative;" v-if="error" v-on:click="clearError">
+                                        <div class="error_content" style="position: absolute; top: auto; bottom: 0; left: 0; right: 0;">
+                                            <div class="error_box" v-if="error instanceof $window.Error">
+                                                <div class="error_info_item">
+                                                    <pre class="default_codeviewer">{{ error.name }}: {{ error.message }}.
+{{ formatAndGroupStackTrace(error.stack) }}</pre>
                                                 </div>
                                             </div>
-                                            <div v-else="">
-                                                <div>{{ error }}</div>
+                                            <div class="error_box" v-else="">
+                                                <div class="error_info_item">{{ error }}</div>
                                             </div>
                                         </div>
                                     </div>

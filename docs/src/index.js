@@ -4,9 +4,9 @@ window.process = {
         NODE_ENV: (window.location.href.startsWith("https") ? "production" : "test")
     }
 };
+process.env.NODE_ENV = "development";
 process.env.NODE_ENV = "production";
 process.env.NODE_ENV = "test";
-process.env.NODE_ENV = "development";
 const main = async function () {
     try {
         Import_scripts: {
@@ -14,23 +14,29 @@ const main = async function () {
                 importer.setTotal(44);
                 importer.setTimeout(1000 * 0);
                 Bundlelist_js: {
-                    await Promise.all([
-                        importer.scriptSrc("src/external/socket.io-client.js"),
-                        importer.scriptSrc("src/external/vue-v2.js"),
-                        importer.scriptSrc("src/external/basic-logger.js"),
-                        importer.scriptSrc("src/external/ensure.js"),
-                        importer.scriptSrc("src/external/ufs.js"),
-                        importer.scriptSrc("src/external/store.unbundled.js"),
-                        importer.scriptSrc("src/external/webmarket.js"),
-                        importer.scriptSrc("src/external/sql-wasm.js"),
-                        importer.scriptSrc("src/external/sqlite-polyfill.js"),
-                        importer.scriptSrc("src/external/sqlite-data-system.unbundled.js"),
-                        importer.scriptSrc("src/directives/autofocus.js"),
-                        importer.scriptSrc("src/components/utils/utils.js"),
-                        importer.scriptSrc("src/components/c-dialogs/c-dialogs.js"),
-                        importer.scriptSrc("src/components/c-badges/c-badges.js"),
-                        // await importer.scriptSrc("dist/components.js"),
-                    ]);
+                    Dependencies_level_1: {
+                        await Promise.all([
+                            importer.scriptSrc("src/external/socket.io-client.js"),
+                            importer.scriptSrc("src/external/vue-v2.js"),
+                            importer.scriptSrc("src/external/basic-logger.js"),
+                            importer.scriptSrc("src/external/ensure.js"),
+                            importer.scriptSrc("src/external/ufs.js"),
+                            importer.scriptSrc("src/external/store.unbundled.js"),
+                            importer.scriptSrc("src/external/browsie.js"),
+                            importer.scriptSrc("src/external/sql-wasm.js"),
+                            importer.scriptSrc("src/external/sqlite-polyfill.js"),
+                            importer.scriptSrc("src/external/sqlite-data-system.unbundled.js"),
+                            // await importer.scriptSrc("dist/components.js"),
+                        ]);
+                    }
+                    Dependencies_level_2: {
+                        await Promise.all([
+                            importer.scriptSrc("src/directives/autofocus.js"),
+                            importer.scriptSrc("src/components/utils/utils.js"),
+                            importer.scriptSrc("src/components/c-dialogs/c-dialogs.js"),
+                            importer.scriptSrc("src/components/c-badges/c-badges.js"),
+                        ]);
+                    }
                 }
                 Bundlelist_components: {
                     await Promise.all([
@@ -39,6 +45,9 @@ const main = async function () {
                         importer.importVueComponent("src/components/c-badge/c-badge"),
                         importer.importVueComponent("src/components/wiki-page/wiki-page"),
                         importer.importVueComponent("src/components/wiki-home-page/wiki-home-page"),
+                        importer.importVueComponent("src/components/wiki-settings-page/wiki-settings-page"),
+                        importer.importVueComponent("src/components/wiki-searcher-page/wiki-searcher-page"),
+                        importer.importVueComponent("src/components/wiki-database-page/wiki-database-page"),
                         importer.importVueComponent("src/components/app/app"),
                     ]);
                 }
@@ -70,12 +79,11 @@ const main = async function () {
             Vue.prototype.$importer = importer;
             Vue.prototype.$socketio = io;
             Vue.prototype.$fetch = fetch;
+            Vue.prototype.$ensure = ensure;
             Vue.prototype.$ufs = UFS_manager.create();
             Vue.prototype.$store = UniversalStore.create();
+            Vue.prototype.$browsie = await Browsie.open("enciclopedia_local");
             Vue.prototype.$utils = Enciclopedia_local_utils;
-            Vue.prototype.$market = {
-                articulos: await Webmarket.open("enciclopedia_local.articulos"),
-            };
             Conflictive_point: {
                 // Vue.prototype.$sqlite = new SQLitePolyfill("litestarter.main.db", "src/external/sql-wasm.wasm");
                 // await Vue.prototype.$sqlite.init("litestarter.main.db", "src/external/sql-wasm.wasm");
